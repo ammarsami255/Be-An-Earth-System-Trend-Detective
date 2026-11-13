@@ -84,6 +84,17 @@ def test_full_pipeline_cairo_t2m(real_cairo_dataset):
     assert smk_res["trend"] == "increasing"
     assert smk_res["is_significant"] is True
 
+    # 5b. Hamed & Rao Modified Mann-Kendall and Month-by-Month breakdown
+    from src.trend_analysis import compute_calendar_month_breakdown, hamed_rao_modified_mann_kendall
+    hr_res = hamed_rao_modified_mann_kendall(ann_df["value"])
+    assert hr_res["trend"] == "increasing"
+    assert hr_res["is_significant"] is True
+
+    cal_df = compute_calendar_month_breakdown(clean_df)
+    assert len(cal_df) == 12
+    # Verify that 8 months are significant and 4 are not
+    assert cal_df["is_significant"].sum() == 8
+
     # 6. Synthesis of 4 questions
     answers = synthesize_scientific_answers(
         mk_res=mk_ann,
@@ -93,7 +104,6 @@ def test_full_pipeline_cairo_t2m(real_cairo_dataset):
         variable_name="Temperature at 2 Meters",
         units="°C",
         location_name="Greater Cairo",
-        time_span_years=43.0,
         start_year=1981,
         end_year=2023,
         time_resolution="annual",

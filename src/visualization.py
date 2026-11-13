@@ -287,6 +287,7 @@ def plot_regional_comparison(
 def plot_autocorrelation_acf(acf_info: Dict[str, Any]) -> go.Figure:
     """
     Renders Autocorrelation Function (ACF) chart with Bartlett's 95% confidence bounds.
+    Displays both Raw ACF and Detrended Residual ACF when available.
     """
     fig = go.Figure()
     lags = acf_info["lags"]
@@ -294,36 +295,50 @@ def plot_autocorrelation_acf(acf_info: Dict[str, Any]) -> go.Figure:
     ci = acf_info["ci_bound_95"]
 
     # Shaded confidence band for white noise
-    fig.add_hline(y=ci, line_dash="dash", line_color="#94A3B8", annotation_text="+95% CI")
-    fig.add_hline(y=-ci, line_dash="dash", line_color="#94A3B8", annotation_text="-95% CI")
+    fig.add_hline(y=ci, line_dash="dash", line_color="#94A3B8", annotation_text="+95% White Noise Bound")
+    fig.add_hline(y=-ci, line_dash="dash", line_color="#94A3B8", annotation_text="-95% White Noise Bound")
     fig.add_hline(y=0.0, line_color="#475569")
 
-    # Lollipop lines
+    # Raw ACF Lollipops and Markers
     for lag, val in zip(lags, acf_vals):
         fig.add_trace(
             go.Scatter(
                 x=[lag, lag],
                 y=[0, val],
                 mode="lines",
-                line={"color": NASA_BLUE, "width": 2.5},
+                line={"color": NASA_BLUE, "width": 2.0},
                 showlegend=False,
                 hoverinfo="skip",
             )
         )
 
-    # Markers
     fig.add_trace(
         go.Scatter(
             x=lags,
             y=acf_vals,
             mode="markers",
             marker={"size": 8, "color": NASA_BLUE},
-            name="Autocorrelation (r_k)",
-            hovertemplate="<b>Lag</b>: %{x}<br><b>ACF</b>: %{y:.3f}<extra></extra>",
+            name="Raw Series ACF",
+            hovertemplate="<b>Lag</b>: %{x}<br><b>Raw ACF</b>: %{y:.3f}<extra></extra>",
         )
     )
 
-    title = "Serial Autocorrelation Function (ACF Diagnostic)"
+    # Detrended Residual ACF
+    if "residual_acf_values" in acf_info:
+        res_acf = acf_info["residual_acf_values"]
+        fig.add_trace(
+            go.Scatter(
+                x=lags,
+                y=res_acf,
+                mode="lines+markers",
+                marker={"size": 7, "color": "#10B981", "symbol": "diamond"},
+                line={"color": "#10B981", "dash": "dot", "width": 1.5},
+                name="Detrended Residual ACF",
+                hovertemplate="<b>Lag</b>: %{x}<br><b>Residual ACF</b>: %{y:.3f}<extra></extra>",
+            )
+        )
+
+    title = "Serial Autocorrelation Diagnostic (Raw vs. Detrended Residuals)"
     return _apply_scientific_theme(fig, title, "Lag (Steps)", "Autocorrelation Coefficient (r)")
 
 

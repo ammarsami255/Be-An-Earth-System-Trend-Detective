@@ -38,8 +38,10 @@ from src.preprocessing import (
 )
 from src.trend_analysis import (
     compute_autocorrelation,
+    compute_calendar_month_breakdown,
     compute_linear_regression,
     compute_sens_slope,
+    hamed_rao_modified_mann_kendall,
     mann_kendall_test,
     seasonal_mann_kendall_test,
     synthesize_scientific_answers,
@@ -430,13 +432,13 @@ if page == "🏠 Home & Overview":
                 unsafe_allow_html=True,
             )
         with c3:
-            total_ch = sen_res["slope"] * 43.0
+            total_ch = sen_res["slope"] * 42.0  # 42 elapsed years from 1981 to 2023
             st.markdown(
                 f"""
                 <div class="stat-card">
-                    <div class="stat-label">Cumulative 43-Yr Change</div>
+                    <div class="stat-label">Net Shift (42 Elapsed Yrs)</div>
                     <div class="stat-val">+{total_ch:.2f} °C</div>
-                    <div class="stat-sub">Estimated Sen's Net Shift</div>
+                    <div class="stat-sub">Sen's Slope × 42 Years</div>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -471,6 +473,12 @@ if page == "🏠 Home & Overview":
 elif page == "📂 Data Explorer":
     st.markdown(f"## 📂 Data Explorer — {active_location}")
     st.markdown("Inspect, validate, and verify raw NASA Earth Science datasets and metadata.")
+
+    st.info(
+        "📍 **Spatial Representation Notice**: These observations represent the single native **MERRA-2 0.5° × 0.625° grid cell** "
+        f"(~50 km × 60 km) containing the queried point ({metadata_current.get('latitude', 'N/A')}°N, {metadata_current.get('longitude', 'N/A')}°E). "
+        "It reflects the regional grid-box atmospheric assimilation value, not a municipal/governorate administrative boundary average."
+    )
 
     # Metadata display
     meta_cols = st.columns(3)
@@ -640,19 +648,21 @@ elif page == "🔬 Trend Analysis Engine":
         x_vals = test_df["year"].values
         y_vals = test_df["value"].values
         res_label = "annual"
-        time_span = float(x_vals[-1] - x_vals[0] + 1)
     else:
         test_df = var_df.sort_values(by="date")
         x_vals = np.arange(len(test_df))
         y_vals = test_df["value"].values
         res_label = "monthly"
-        time_span = float((test_df["year"].max() - test_df["year"].min()) + 1)
+
+    start_yr = int(test_df["year"].min())
+    end_yr = int(test_df["year"].max())
 
     # Run statistical tests
     mk_result = mann_kendall_test(y_vals, alpha=alpha_val)
+    hr_result = hamed_rao_modified_mann_kendall(y_vals, alpha=alpha_val)
     sen_result = compute_sens_slope(y_vals, x_vals, alpha=alpha_val)
     ols_result = compute_linear_regression(y_vals, x_vals)
-    acf_result = compute_autocorrelation(y_vals, max_lag=12)
+    acf_result = compute_autocorrelation(y_vals, x_time=x_vals, max_lag=12)
 
     answers = synthesize_scientific_answers(
         mk_res=mk_result,
@@ -662,9 +672,8 @@ elif page == "🔬 Trend Analysis Engine":
         variable_name=VARIABLE_METADATA.get(sel_var, {}).get("name", sel_var),
         units=units,
         location_name=active_location,
-        time_span_years=time_span,
-        start_year=int(test_df["year"].min()),
-        end_year=int(test_df["year"].max()),
+        start_year=start_yr,
+        end_year=end_yr,
         time_resolution=res_label,
     )
 
@@ -706,7 +715,7 @@ elif page == "🔬 Trend Analysis Engine":
                 <div class="stat-val" style="color: {'#10B981' if mk_result['trend'] == 'increasing' else ('#EF4444' if mk_result['trend'] == 'decreasing' else '#64748B')}">
                     {mk_result['trend'].upper()}
                 </div>
-                <div class="stat-sub">Hypothesis Reject: {mk_result['is_significant']}</div>
+                <div class="stat-sub">S = {mk_result['s_statistic']:+.1f} | n = {mk_result['sample_size']}</div>
             </div>
             """,
             unsafe_allow_html=True,
@@ -736,17 +745,64 @@ elif page == "🔬 Trend Analysis Engine":
             unsafe_allow_html=True,
         )
     with mc4:
+        ci_scale = 10 if 'Annual' in resolution else 120
         st.markdown(
             f"""
             <div class="stat-card">
                 <div class="stat-label">Sen's 95% Conf. Interval</div>
                 <div class="stat-val" style="font-size: 1.15rem;">
-                    [{sen_result['slope_ci_lower']*(10 if 'Annual' in resolution else 120):+.3f}, {sen_result['slope_ci_upper']*(10 if 'Annual' in resolution else 120):+.3f}]
+                    [{sen_result['slope_ci_lower']*ci_scale:+.3f}, {sen_result['slope_ci_upper']*ci_scale:+.3f}]
                 </div>
                 <div class="stat-sub">{units} per decade</div>
             </div>
             """,
             unsafe_allow_html=True,
+        )
+
+    # Hamed-Rao Autocorrelation-Corrected Mann-Kendall Comparison
+    st.markdown("#### 🛡️ Robustness Check: Autocorrelation-Corrected Mann-Kendall (Hamed & Rao 1998)")
+    hr_c1, hr_c2, hr_c3 = st.columns(3)
+    with hr_c1:
+        st.write(f"**Hamed-Rao Trend**: `{hr_result['trend'].upper()}`")
+    with hr_c2:
+        st.write(f"**Hamed-Rao Z-stat**: `{hr_result['z_statistic']:.2f}` (vs Standard `{mk_result['z_statistic']:.2f}`)")
+    with hr_c3:
+        st.write(f"**Hamed-Rao p-value**: `{hr_result['p_value']:.4e}` (Significant: `{hr_result['is_significant']}`)")
+
+    # 12-Month Calendar Breakdown (Resolves overgeneralization)
+    if "month" in var_df.columns and len(var_df["month"].unique()) >= 12:
+        st.markdown("---")
+        st.markdown("### 🗓️ Month-by-Month Calendar Breakdown (12 Individual Months)")
+        st.caption("Rigorously evaluates trend statistics for each calendar month separately across all observation years.")
+        
+        cal_breakdown = compute_calendar_month_breakdown(var_df, value_col="value", alpha=alpha_val)
+        sig_months = cal_breakdown[cal_breakdown["is_significant"]]["month_name"].tolist()
+        nonsig_months = cal_breakdown[~cal_breakdown["is_significant"]]["month_name"].tolist()
+
+        st.info(
+            f"**Seasonal Synthesis**: {len(sig_months)} of 12 months exhibit statistically significant warming trends "
+            f"({', '.join(sig_months)}). Conversely, {len(nonsig_months)} months ({', '.join(nonsig_months)}) "
+            f"do not exhibit statistically significant monotonic trends at α = {alpha_val}."
+        )
+
+        st.dataframe(
+            cal_breakdown[[
+                "month_name", "observations", "mean_val", "trend", "is_significant",
+                "p_value", "z_statistic", "kendall_tau", "sen_slope_per_decade", "ols_slope_per_decade"
+            ]],
+            use_container_width=True,
+            column_config={
+                "month_name": "Month",
+                "observations": "Obs (Yrs)",
+                "mean_val": f"Mean ({units})",
+                "trend": "Mann-Kendall Trend",
+                "is_significant": "Significant?",
+                "p_value": "p-value",
+                "z_statistic": "Z-Score",
+                "kendall_tau": "Kendall Tau",
+                "sen_slope_per_decade": f"Sen Slope ({units}/dec)",
+                "ols_slope_per_decade": f"OLS Slope ({units}/dec)",
+            },
         )
 
     # Seasonal Mann-Kendall section if monthly series
@@ -761,7 +817,8 @@ elif page == "🔬 Trend Analysis Engine":
         with sc2:
             st.metric("Seasonal p-value", f"{smk_res['p_value']:.4e}", delta="Significant" if smk_res["is_significant"] else "Not Significant")
         with sc3:
-            st.metric("Seasonal Sen's Slope", f"{smk_res['sen_slope']*120:+.3f} {units}/decade")
+            # Note: smk_res['sen_slope'] is already in units/year; multiply by 10 for decadal rate
+            st.metric("Seasonal Sen's Slope", f"{smk_res['sen_slope']*10.0:+.3f} {units}/decade")
 
     # Autocorrelation diagnostic
     st.markdown("---")
@@ -781,9 +838,11 @@ elif page == "🗺️ Regional Comparison":
     st.markdown(
         """
         Comparing multi-decadal trends across diverse climatic zones of Egypt:
-        - **Greater Cairo**: Nile Delta & Valley urban metropolis
-        - **Alexandria**: Mediterranean coastal marine zone
-        - **Aswan**: Upper Egypt hyper-arid desert climate
+        - **Greater Cairo**: Nile Delta & Valley urban metropolis (Grid Cell 30.04°N, 31.24°E)
+        - **Alexandria**: Mediterranean coastal marine zone (Grid Cell 31.20°N, 29.92°E)
+        - **Aswan**: Upper Egypt hyper-arid desert climate (Grid Cell 24.09°N, 32.90°E)
+        
+        *Note: Comparisons evaluate the three individual MERRA-2 0.5° × 0.625° grid cells, not whole administrative governorate spatial averages.*
         """
     )
 

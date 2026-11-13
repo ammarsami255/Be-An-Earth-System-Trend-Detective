@@ -40,17 +40,18 @@ We investigated continuous 43-year monthly 2-meter air temperature data (`T2M`) 
 
 | Metric | Result | Interpretation |
 | :--- | :--- | :--- |
-| **Observation Period** | 1981–2023 (43 years, 516 months) | Complete historical record, zero missing values |
-| **Mann-Kendall Trend** | **Increasing (Upward)** | Null hypothesis rejected ($H_1$ accepted) |
-| **p-value** | $8.89 \times 10^{-8}$ | Highly statistically significant ($p < 0.001 \ll \alpha = 0.05$) |
-| **Standardized Z** | $+5.35$ | Well above the $99.9\%$ critical threshold ($Z_{0.999} = 3.29$) |
-| **Kendall's $\tau$** | $+0.567$ | Substantial positive rank correlation over time |
+| **Observation Record** | 1981–2023 (43 years, 516 months) | Complete historical record, zero missing values, single MERRA-2 grid cell |
+| **Annual MK Trend ($n=43$)** | **Increasing (Upward)** | Null hypothesis rejected ($H_1$ accepted, $S = +512.0$) |
+| **Annual p-value** | $8.89 \times 10^{-8}$ | Highly statistically significant ($p < 0.001 \ll \alpha = 0.05$) |
+| **Annual Standardized Z** | $+5.35$ | Well above the $99.9\%$ critical threshold ($Z_{0.999} = 3.29$) |
+| **Kendall's $\tau$** | $+0.567$ | Substantial positive monotonic rank correlation |
 | **Sen's Slope Rate** | **$+0.0293^\circ\text{C / year}$** | **$+0.293^\circ\text{C / decade}$** warming rate |
-| **Sen's 95% CI** | $[+0.0202, +0.0389]^\circ\text{C / year}$ | Entire confidence interval is strictly positive |
-| **OLS Linear Rate** | $+0.0305^\circ\text{C / year}$ ($R^2 = 0.503$) | Strong linear agreement with robust median slope |
-| **Net Cumulative Shift** | **$+1.26^\circ\text{C}$** | Substantial warming across the 43-year observation window |
-| **Seasonal Mann-Kendall** | $Z = +8.05$, $p < 10^{-15}$ | Upward warming is verified across all 12 individual calendar months |
-| **Lag-1 Autocorrelation** | $r_1 = +0.326$ | Moderate serial persistence (explicitly reported in diagnostics) |
+| **Sen's 95% CI** | $[+0.0202, +0.0389]^\circ\text{C / year}$ | Entire confidence interval is strictly positive ($[+0.202, +0.389]^\circ\text{C/dec}$) |
+| **OLS Linear Rate** | $+0.0305^\circ\text{C / year}$ ($R^2 = 0.503$) | Strong linear agreement with robust median slope ($p = 9.99 \times 10^{-8}$) |
+| **Net Cumulative Shift** | **$+1.23^\circ\text{C}$** | Net warming over 42 elapsed years ($+1.26^\circ\text{C}$ over 43 steps) |
+| **Seasonal MK ($n=516$)** | $Z = +8.05$, $p < 10^{-15}$ | Multi-decadal upward trajectory ($S = +2665$, Sen's slope $+0.303^\circ\text{C/decade}$) |
+| **Monthly Breakdown** | 8 of 12 months significant | Significant in Feb, May, Jul–Dec (Nov fastest: $+0.504^\circ\text{C/dec}$); Jan, Mar, Apr, Jun non-sig |
+| **Hamed-Rao Modified MK** | $Z^* = +5.35$, $p = 8.89 \times 10^{-8}$ | Confirmed robust against red noise: detrended residual $r_1 = -0.248$ (within white noise bound) |
 
 ---
 
