@@ -36,6 +36,7 @@ from src.preprocessing import (
     filter_by_date_range,
     handle_missing_values,
 )
+from src.extremes_analysis import METRIC_INFO, analyze_temperature_extremes, compare_regional_extremes
 from src.rainfall_analysis import analyze_rainfall, compare_regional_rainfall
 from src.trend_analysis import (
     compute_autocorrelation,
@@ -52,7 +53,10 @@ from src.visualization import (
     plot_anomaly_bars,
     plot_autocorrelation_acf,
     plot_climatology_heatmap,
+    plot_decadal_extreme_months,
     plot_decadal_shift_bars,
+    plot_extreme_index,
+    plot_monthly_extreme_trends,
     plot_rainfall_annual_totals,
     plot_rainfall_monthly_climatology,
     plot_regional_comparison,
@@ -60,6 +64,7 @@ from src.visualization import (
     plot_temperature_extremes_comparison,
     plot_timeseries_with_trend,
 )
+from src.visualization import NASA_BLUE as NASA_BLUE_HEX, NASA_RED as NASA_RED_HEX
 
 # Page configuration
 st.set_page_config(
@@ -208,6 +213,7 @@ with st.sidebar:
             "🔬 Trend Analysis Engine",
             "🗺️ Regional Comparison",
             "🌧️ Rainfall Analysis",
+            "🔥 Temperature Extremes",
             "⚠️ Anomaly Detection",
             "📚 Methodology & Sources",
         ],
@@ -1185,6 +1191,127 @@ elif page == "🌧️ Rainfall Analysis":
         - Each region is a single ~50 km grid cell, not a city-wide or national average.
         - A "wet month" is defined as ≥ 1 mm monthly total; results for wet-month counts depend on this threshold.
         - In Aswan almost every month is dry, so trend tests have very little information to work with.
+        """
+    )
+
+
+# ==========================================
+# PAGE: TEMPERATURE EXTREMES
+# ==========================================
+elif page == "🔥 Temperature Extremes":
+    st.markdown("## 🔥 Temperature Extremes: Hottest and Coldest")
+    st.markdown(
+        """
+        People feel the **extremes**, not the average. NASA POWER gives, for every month, the **hottest value reached**
+        (`T2M_MAX`) and the **coldest value reached** (`T2M_MIN`). From these we build five yearly indices:
+
+        1. **Hottest value of the year**, the single highest monthly maximum.
+        2. **Coldest value of the year**, the single lowest monthly minimum.
+        3. **Unusually hot months**: months whose maximum is above the 1981–2010 **90th percentile** *for that calendar month*.
+        4. **Unusually cold months**: months whose minimum is below the 1981–2010 **10th percentile** *for that calendar month*.
+        5. **Monthly extreme range**: hottest minus coldest value in each month, averaged over the year.
+
+        A "hot July" is judged against other Julys, not against January. Under a stable 1981–2010 climate you would expect
+        about **1.2 unusually hot and 1.2 unusually cold months per year** (10% of 12 months).
+        """
+    )
+
+    ext_files = {
+        "Greater Cairo": os.path.join("data", "raw", "nasa_power_cairo_1981_2023.csv"),
+        "Alexandria": os.path.join("data", "raw", "nasa_power_alexandria_1981_2023.csv"),
+        "Aswan": os.path.join("data", "raw", "nasa_power_aswan_1981_2023.csv"),
+    }
+    ext_dfs = {name: load_bundled_dataset(path, name)[0] for name, path in ext_files.items() if os.path.exists(path)}
+    if not ext_dfs:
+        st.warning("Regional temperature datasets are not available.")
+        st.stop()
+
+    ext_region = st.radio("Region", list(ext_dfs.keys()), horizontal=True, key="ext_region")
+    ext_res = analyze_temperature_extremes(ext_dfs[ext_region], ext_region)
+    et = ext_res["trends"]
+
+    e1, e2, e3, e4 = st.columns(4)
+    e1.metric("Hottest of year", f"{et['annual_hottest']['sen_per_decade']:+.2f} °C/dec",
+              "significant" if et["annual_hottest"]["is_significant"] else "not significant", delta_color="off")
+    e2.metric("Coldest of year", f"{et['annual_coldest']['sen_per_decade']:+.2f} °C/dec",
+              "significant" if et["annual_coldest"]["is_significant"] else "not significant", delta_color="off")
+    e3.metric("Hot months", f"{et['hot_months']['sen_per_decade']:+.2f} /dec",
+              "significant" if et["hot_months"]["is_significant"] else "not significant", delta_color="off")
+    e4.metric("Cold months", f"{et['cold_months']['sen_per_decade']:+.2f} /dec",
+              "significant" if et["cold_months"]["is_significant"] else "not significant", delta_color="off")
+
+    st.markdown("### 🔍 The 4 Questions — Temperature Extremes")
+    es = ext_res["summary"]
+    st.markdown(f"**1. What is changing?** {es['q1_what']}")
+    st.markdown(f"**2. Where?** {es['q2_where']}")
+    st.markdown(f"**3. How much?** {es['q3_how_much']}")
+    st.markdown(f"**4. Is it statistically significant?** {es['q4_is_significant']}")
+
+    c_left, c_right = st.columns(2)
+    with c_left:
+        st.plotly_chart(plot_extreme_index(ext_res["annual"], "annual_hottest", et["annual_hottest"],
+                                           f"Hottest of Each Year", "°C", NASA_RED_HEX),
+                        use_container_width=True)
+    with c_right:
+        st.plotly_chart(plot_extreme_index(ext_res["annual"], "annual_coldest", et["annual_coldest"],
+                                           f"Coldest of Each Year", "°C", NASA_BLUE_HEX),
+                        use_container_width=True)
+
+    st.plotly_chart(plot_decadal_extreme_months(ext_res["decades"]), use_container_width=True)
+    st.caption("Bars show the average number of unusually hot / cold months per year in each decade. The 1980s contain only 9 years (1981–1989) and the 2020s only 4 (2020–2023).")
+
+    st.plotly_chart(plot_monthly_extreme_trends(ext_res["by_month_tmax"], ext_res["by_month_tmin"]), use_container_width=True)
+    st.caption("Each calendar month is tested separately (43 values each). Solid bars stay significant after Benjamini-Hochberg FDR correction for testing 12 months; faded bars do not.")
+
+    st.markdown("### 📊 All Five Indices")
+    idx_rows = []
+    for key, (label, unit) in METRIC_INFO.items():
+        t = et[key]
+        lo, hi = t["ci_per_decade"]
+        cp = t["pettitt"]
+        idx_rows.append({
+            "Index": label,
+            "Mean": round(t["mean"], 2),
+            "Slope / decade": f"{t['sen_per_decade']:+.2f} {unit}",
+            "95% CI": f"[{lo:+.2f}, {hi:+.2f}]",
+            "Slope method": t["slope_method"],
+            "MK p": f"{t['mk_p']:.2e}",
+            "Hamed-Rao p": f"{t['hr_p']:.2e}",
+            "Trend (both tests)": t["verdict"],
+            "Abrupt shift (Pettitt)": f"Yes, from {cp['new_regime_start']}" if cp["is_significant"] else "No",
+        })
+    st.dataframe(pd.DataFrame(idx_rows), use_container_width=True, hide_index=True)
+    st.caption("Counts (hot/cold months) are small integers with many ties, so Sen's median slope collapses to 0; their magnitude is given by OLS, while significance always comes from the rank-based Mann-Kendall and Hamed-Rao tests.")
+
+    st.markdown("### 🏆 Record Years")
+    ann_e = ext_res["annual"]
+    r1, r2 = st.columns(2)
+    with r1:
+        st.markdown("**5 hottest years (highest monthly maximum)**")
+        st.dataframe(ann_e.nlargest(5, "annual_hottest")[["year", "annual_hottest", "hottest_month"]]
+                     .rename(columns={"year": "Year", "annual_hottest": "Hottest (°C)", "hottest_month": "Month"}).round(2),
+                     use_container_width=True, hide_index=True)
+    with r2:
+        st.markdown("**5 coldest years (lowest monthly minimum)**")
+        st.dataframe(ann_e.nsmallest(5, "annual_coldest")[["year", "annual_coldest", "coldest_month"]]
+                     .rename(columns={"year": "Year", "annual_coldest": "Coldest (°C)", "coldest_month": "Month"}).round(2),
+                     use_container_width=True, hide_index=True)
+
+    st.markdown("### 🗺️ Regional Comparison of Extremes")
+    st.dataframe(compare_regional_extremes(ext_dfs), use_container_width=True, hide_index=True)
+
+    st.info(
+        "🔥 **Key finding**: in all three regions the **hottest value of the year is rising** and **unusually hot months are "
+        "becoming more frequent**. Unusually **cold** months are becoming **rarer** in Cairo and Aswan. The single coldest "
+        "value of the year shows no significant trend anywhere: one value per year is noisy, so a change there is harder to detect."
+    )
+    st.markdown(
+        """
+        **Limitations**
+        - Values are MERRA-2 reanalysis grid-cell extremes (~50 km), not station records; local extremes can be more severe.
+        - Percentile thresholds are estimated from 30 values per calendar month, so they carry sampling uncertainty.
+        - Hamed-Rao can produce a much smaller p-value than Mann-Kendall when autocorrelation is negative; a trend is
+          called significant only when **both** tests agree.
         """
     )
 

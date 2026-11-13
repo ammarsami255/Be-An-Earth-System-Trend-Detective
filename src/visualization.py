@@ -526,3 +526,64 @@ def plot_temperature_extremes_comparison(comp_df: pd.DataFrame) -> go.Figure:
         margin={"b": 90},
     )
     return fig
+
+
+def plot_extreme_index(
+    annual_df: pd.DataFrame,
+    value_col: str,
+    trend: Dict[str, Any],
+    title: str,
+    y_title: str,
+    color: str = NASA_RED,
+    as_bars: bool = False,
+) -> go.Figure:
+    """One yearly extreme index (line or bars) with its trend line (Sen's slope or OLS for counts)."""
+    df = annual_df.sort_values("year")
+    fig = go.Figure()
+    if as_bars:
+        fig.add_trace(go.Bar(x=df["year"], y=df[value_col], marker_color=color, name=y_title,
+                             hovertemplate="<b>%{x}</b>: %{y}<extra></extra>"))
+    else:
+        fig.add_trace(go.Scatter(x=df["year"], y=df[value_col], mode="lines+markers", name="Yearly value",
+                                 line={"color": color, "width": 2.0}, marker={"size": 5},
+                                 hovertemplate="<b>%{x}</b>: %{y:.2f}<extra></extra>"))
+    x_vals = df["year"].astype(float).values
+    fig.add_trace(go.Scatter(
+        x=df["year"], y=trend["sen_intercept"] + trend["sen_slope_per_year"] * x_vals, mode="lines",
+        name=f"{trend.get('slope_method', 'Trend')}: {trend['sen_per_decade']:+.2f} / decade",
+        line={"color": NASA_DARK_NAVY, "width": 2.5, "dash": "dash"}, hoverinfo="skip",
+    ))
+    fig = _apply_scientific_theme(fig, title, "Year", y_title)
+    fig.update_layout(legend={"orientation": "h", "yanchor": "top", "y": -0.18, "xanchor": "left", "x": 0.0}, margin={"b": 80})
+    return fig
+
+
+def plot_decadal_extreme_months(decades_df: pd.DataFrame) -> go.Figure:
+    """Unusually hot vs cold months per year, averaged by decade."""
+    fig = go.Figure()
+    fig.add_trace(go.Bar(x=decades_df["label"], y=decades_df["hot_per_year"], name="Unusually hot months / year",
+                         marker_color=NASA_RED, hovertemplate="%{x}: %{y:.2f} hot months/yr<extra></extra>"))
+    fig.add_trace(go.Bar(x=decades_df["label"], y=decades_df["cold_per_year"], name="Unusually cold months / year",
+                         marker_color=NASA_LIGHT_BLUE, hovertemplate="%{x}: %{y:.2f} cold months/yr<extra></extra>"))
+    fig.add_hline(y=1.2, line_dash="dot", line_color="#334155",
+                  annotation_text="Expected if climate were like 1981–2010 (≈1.2/yr)", annotation_position="top right", annotation_font_color=TEXT_COLOR)
+    fig = _apply_scientific_theme(fig, "Unusually Hot vs Cold Months per Year, by Decade", "Decade", "Months per year")
+    fig.update_layout(barmode="group", hovermode="closest", legend={"orientation": "h", "yanchor": "top", "y": -0.18, "xanchor": "left", "x": 0.0}, margin={"b": 90})
+    return fig
+
+
+def plot_monthly_extreme_trends(by_month_tmax: pd.DataFrame, by_month_tmin: pd.DataFrame) -> go.Figure:
+    """Warming rate of each calendar month's hottest and coldest value; solid bars = significant after FDR."""
+    fig = go.Figure()
+    for df, name, color in [(by_month_tmax, "Hottest value (T2M_MAX)", NASA_RED),
+                            (by_month_tmin, "Coldest value (T2M_MIN)", NASA_LIGHT_BLUE)]:
+        opacity = np.where(df["sig_bh"], 1.0, 0.35)
+        fig.add_trace(go.Bar(
+            x=df["month_name"], y=df["sen_slope_per_decade"], name=name, marker_color=color,
+            marker_opacity=opacity, customdata=df["p_bh"],
+            hovertemplate="<b>%{x}</b>: %{y:+.2f} °C/decade (FDR p = %{customdata:.3f})<extra></extra>",
+        ))
+    fig.add_hline(y=0.0, line_width=1.2, line_color="#334155")
+    fig = _apply_scientific_theme(fig, "Which Months Are Warming?", "Month", "°C per decade (Sen's slope)")
+    fig.update_layout(barmode="group", hovermode="closest", legend={"orientation": "h", "yanchor": "top", "y": -0.18, "xanchor": "left", "x": 0.0}, margin={"b": 90})
+    return fig
