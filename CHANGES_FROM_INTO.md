@@ -215,4 +215,77 @@ streamlit run app.py                 # http://localhost:8501
 - Streamlit prints deprecation warnings for `use_container_width` (Streamlit wants `width="stretch"`); it still works in the pinned version, but should be replaced before upgrading Streamlit.
 - `scripts/reproducible_scientific_audit.py` crashes on the Windows console because of the `✓` character; run it with `PYTHONIOENCODING=utf-8` (it passes).
 - The rainfall jump in 2015 is **not yet validated** against an independent dataset (GPM IMERG).
-- Not started: rainfall anomaly detection (e.g. SPI), forecasting.
+- Completed: Climate Anomaly Detection Engine (WMO 1981–2010 normal, persistent spells, multi-scalar SPI, compound extremes).
+- Completed: Climate Anomaly Forecasting System (Seasonal Naive baseline, Holt-Winters ETS, SARIMAX, expanding-window multi-origin backtesting, prediction intervals, and dedicated 4-tab Streamlit forecasting interface).
+
+---
+
+## 13. Phase 3 & 4 Update: Climate Anomaly Detection & Anomaly Forecasting Engine (2026-11-13)
+
+### 13.1 Anomaly Forecasting Engine (`src/forecasting.py`)
+- **Three Candidate Architectures Implemented**:
+  1. **Seasonal Naive Baseline Benchmark**: Point projection $\hat{y}_{T+h} = y_{T+h-12}$ repeating the final historical year's seasonal cycle. Residual variance $\hat{\sigma}_{\text{naive}}^2$ computed from in-sample seasonal differences $y_t - y_{t-12}$ with multi-step horizon variance scaling $\text{Var}(\hat{y}_{T+h}) = k \cdot \hat{\sigma}^2$ ($k = \lceil h/12 \rceil$).
+  2. **Holt-Winters Additive Exponential Smoothing (ETS)**: State-space additive level, linear trend, and 12-month seasonality fit via MLE/SSE. Generates 80% and 95% prediction intervals via 1,000 Monte Carlo innovations simulations.
+  3. **SARIMAX State-Space Model**: Parsimonious $\text{SARIMA}(1,0,0) \times (1,1,0)_{12}$ formulation with exact analytical Kalman filter covariance prediction intervals.
+- **Strict Chronological Expanding-Window Cross-Validation**:
+  - Evaluated across **5 historical forecast origins** (2018–2022) with a 12-month test horizon per origin.
+  - Zero future data leakage: each split trains strictly on observations prior to the forecast origin.
+  - Out-of-sample metrics computed per split and aggregate: MAE, RMSE, and **Mean Absolute Scaled Error (MASE)** relative to the in-sample Seasonal Naive benchmark (Hyndman & Koehler, 2006).
+  - Model tournament automatically designates the model with lowest out-of-sample MAE as winner.
+  - Empirical Cairo T2M tournament result: Holt-Winters ETS wins with $\text{MAE} = 0.981^\circ\text{C}$, $\text{RMSE} = 1.201^\circ\text{C}$, and $\text{MASE} = 0.800$ (outperforming Seasonal Naive $\text{MAE} = 1.287^\circ\text{C}$).
+- **Probabilistic Prediction Intervals (80% & 95%)**:
+  - Fully monotonic uncertainty bounds ($\text{CI}_{95,\text{low}} \le \text{CI}_{80,\text{low}} \le \hat{y} \le \text{CI}_{80,\text{high}} \le \text{CI}_{95,\text{high}}$).
+- **WMO 1981–2010 Climatological Anomaly Evaluation**:
+  - Projects expected departures $\hat{A}_{T+h} = \hat{y}_{T+h} - \mu_{m(h)}$ and standardized departures $\hat{Z}_{T+h} = \hat{A}_{T+h} / \sigma_{m(h)}$.
+  - Maps departures into standard IPCC/WMO severity brackets: Extreme Warm ($\ge +3\sigma$), Severe Warm ($+2\sigma$ to $+3\sigma$), Moderate Warm ($+1\sigma$ to $+2\sigma$), Near Normal ($-1\sigma$ to $+1\sigma$), Moderate Cold ($-2\sigma$ to $-1\sigma$), Severe Cold ($-3\sigma$ to $-2\sigma$), and Extreme Cold ($\le -3\sigma$).
+- **Physical Guardrails**:
+  - Lower bound clamping at $0.0\text{ mm}$ for precipitation predictions and prediction intervals.
+  - Automatic **Hyper-Arid Regime Advisory** banner for regions with $>80\%$ zero-rain months (e.g., Aswan), alerting users that background models reflect trace baseline precipitation and cannot deterministically extrapolate episodic convective pulses.
+
+### 13.2 Dashboard Integration (`app.py` & `src/visualization.py`)
+- **Top Navigation Integration**:
+  - Added `"🔮 Forecasting": page_forecasting` to `NAV_PAGES` as a primary navigation item.
+  - Adjusted topbar layout ratios to `[1.5, 8.4, 1.5, 0.7]` for responsive rendering across desktop and mobile.
+- **Four Analytical Forecasting Tabs**:
+  1. **📊 Executive Overview**:
+     - Model selector, variable selector, 4 KPI cards (Validation Winner with MASE, 12-Month Expected Anomaly, Peak Forecast Month, 95% Uncertainty Spread).
+     - Primary forecast plot (`plot_forecast_with_intervals`): 5-year historical line, 12-month future projection, 80% & 95% dual shaded yellow envelopes, dotted WMO normal curve, and vertical red dashed dividing line at forecast origin.
+     - Hyper-arid advisory banner for Aswan precipitation.
+  2. **📈 Projections & Intervals**:
+     - Complete 12-month projection table with point forecasts, 80%/95% CI bounds, WMO normal, expected departures, and Percent of Normal.
+     - One-click CSV export button (`earthtrend_<region>_<var>_forecast_2024.csv`).
+     - Expandable model specification and fitted parameters panel.
+  3. **⚠️ Future Anomaly Classification**:
+     - Departure bar chart (`plot_future_anomaly_bars`) with asymmetric 95% uncertainty whiskers.
+     - Month-by-month severity classification table.
+     - Conceptual callout box articulating the distinction between historical observed ground truth vs. forward probabilistic projections.
+  4. **🧪 Chronological Validation & Backtesting**:
+     - Grouped bar chart (`plot_model_backtest_comparison`) comparing MAE, RMSE, and MASE across all 3 candidate models with MASE = 1.0 benchmark parity line.
+     - Multi-origin tournament scoreboard across all 5 test splits.
+     - 2-panel residual diagnostic charts (`plot_forecast_residuals_diagnostic`): Residual time series and distribution histogram.
+
+### 13.3 Test Suite & Quality Assurance
+- **Total Tests**: **61 tests passed out of 61 (100% pass rate in ~21s)**.
+  - `tests/test_forecasting.py`: 8 new unit and integration tests covering Seasonal Naive, Holt-Winters ETS, SARIMAX, prediction interval monotonicity, precipitation non-negativity clamping, expanding-window backtesting tournament, future anomaly classification, Cairo end-to-end real data pipeline, and short-series fallbacks.
+  - `tests/test_streamlit_app.py`: Headless AppTest verified navigation across all 9 pages including `"🔮 Forecasting"`.
+  - `tests/test_anomaly_detection.py`: 16 anomaly detection tests passing.
+  - `tests/test_rainfall_analysis.py`: 11 rainfall and Pettitt tests passing.
+  - `tests/test_extremes_analysis.py`: 6 temperature extreme tests passing.
+  - `tests/test_trend_analysis.py`: 11 trend and Hamed-Rao tests passing.
+  - `tests/test_preprocessing.py`: 6 data cleaning tests passing.
+  - `tests/test_integration.py`: 1 full pipeline integration test passing.
+- **Reproducible Scientific Audit**: `python scripts/reproducible_scientific_audit.py` executed with zero numerical discrepancies across all regional trends, Hamed-Rao corrections, and Cairo calendar month multiple testing adjustments.
+- **Warnings Forensics**: All 21 warnings confirmed as pre-existing synthetic zero-variance test fixtures (20 SciPy log warnings in `test_anomaly_detection.py`) and 1 external Dash plugin hook deprecation. Zero warnings originated from forecasting code.
+
+### 13.4 Dependencies & Documentation Updates
+- `requirements.txt`: Added `statsmodels>=0.14.0`.
+- `README.md`: Updated test badge to `61/61_Passed`, added Section 2.6 documenting the Anomaly Forecasting Engine, and updated technology stack.
+- `MATHEMATICAL_AND_TECHNICAL_DECISIONS.md`: Added Section 2.6 detailing mathematical derivations for Seasonal Naive, Holt-Winters ETS, SARIMAX, MASE, prediction intervals, and the technical decisions comparison table.
+- `SOURCES_AND_REFERENCES.md`: Added citations for Hyndman & Athanasopoulos (2018), Hyndman & Koehler (2006), Box, Jenkins, Reinsel, & Ljung (2015), and Holt (1957) / Winters (1960).
+- `SESSION_HANDOVER.md`: Updated Section 6 recording the implementation, architecture, and verification outcomes.
+
+### 13.5 Git Provenance & Branch Records
+- **New Branch**: `feature/anomaly-forecasting` (branched from local working tree on `feature/rainfall-analysis`).
+- **Previous Branch**: `feature/rainfall-analysis` (HEAD at `e448d70bbba427d1aa61531d92f94f2646ed546a`).
+- **Safety Checkpoint**: `refs/checkpoints/pre-forecasting` (`60f22e23c4b22baaff3dc6cd88cd32e734454854`).
+- **New Commit**: Staged on `feature/anomaly-forecasting`.

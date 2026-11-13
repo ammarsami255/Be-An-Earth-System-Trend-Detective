@@ -17,8 +17,9 @@ Questions answered for each region:
   5. Is the gap between monthly hottest and coldest shrinking?  (monthly extreme range T2M_MAX - T2M_MIN)
 
 Percentile thresholds are computed per calendar month, so a "hot July" is judged against
-other Julys, not against January. This mirrors the percentile approach of the WMO/ETCCDI
-climate extremes indices (e.g. TX90p, TN10p), adapted to monthly data.
+other Julys, not against January. Note: These are monthly-resolution reanalysis proxies
+(TXx proxy, TNn proxy, P90 hot-month counts), distinct from standard daily ETCCDI indices
+(which strictly require daily station records).
 """
 
 from __future__ import annotations
@@ -43,8 +44,8 @@ COLD_PERCENTILE = 10.0
 MONTH_ABBR = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
 
 METRIC_INFO = {
-    "annual_hottest": ("Hottest value of the year (max of T2M_MAX)", "°C"),
-    "annual_coldest": ("Coldest value of the year (min of T2M_MIN)", "°C"),
+    "annual_hottest": ("Hottest value of the year (TXx proxy: max of T2M_MAX)", "°C"),
+    "annual_coldest": ("Coldest value of the year (TNn proxy: min of T2M_MIN)", "°C"),
     "hot_months": ("Unusually hot months per year (T2M_MAX > 1981–2010 P90)", "months"),
     "cold_months": ("Unusually cold months per year (T2M_MIN < 1981–2010 P10)", "months"),
     "extreme_range": ("Mean monthly extreme range (T2M_MAX − T2M_MIN)", "°C"),

@@ -63,9 +63,13 @@ main (stable shared branch)
 
 4. **Verify Existing Tests**:
    ```bash
+   # On Windows (PowerShell):
+   $env:PYTHONIOENCODING="utf-8"
+
+   # Run test suite:
    pytest -v
    ```
-   Do not begin development until all existing tests pass on your machine.
+   Do not begin development until all existing 36 tests pass on your machine (100% pass rate).
 
 ---
 

@@ -99,3 +99,11 @@ def test_real_nasa_extremes():
     assert len(table) == 10
     aswan_hot = table[(table.Region == "Aswan") & table.Index.str.startswith("Unusually hot")].iloc[0]
     assert aswan_hot["Trend"] == "Significant increase"
+
+
+def test_metric_info_contains_txx_tnn_proxies():
+    from src.extremes_analysis import METRIC_INFO
+    assert "TXx proxy" in METRIC_INFO["annual_hottest"][0]
+    assert "TNn proxy" in METRIC_INFO["annual_coldest"][0]
+    assert "T2M_MAX" in METRIC_INFO["annual_hottest"][0]
+    assert "T2M_MIN" in METRIC_INFO["annual_coldest"][0]

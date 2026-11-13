@@ -123,7 +123,28 @@ def hamed_rao_modified_mann_kendall(
     """
     Computes the Hamed & Rao (1998) Modified Mann-Kendall test.
     Corrects the variance of S (var_s) for statistically significant serial autocorrelation
-    in the detrended ranks of the series.
+    in the detrended ranks of the series:
+    
+        Var*(S) = Var(S) * eta, where eta = n / n* = 1 + (2 / (n(n-1)(n-2))) * sum((n-i)(n-i-1)(n-i-2) * rho_i)
+        
+    for all lags i where |rho_i| > Z_{1-alpha/2} / sqrt(n).
+    
+    IMPORTANT SENSITIVITY & INFERENTIAL NOTES:
+    - Variance Inflation vs Deflation:
+      When serial correlation is positive (rho_i > 0), eta > 1, inflating variance and deflating |Z*|
+      (reducing false positives from persistence).
+      Conversely, when significant negative autocorrelation is present (rho_i < 0), eta < 1, deflating
+      variance and increasing |Z*|. For example, in Alexandria annual T2M (n=43), lag-12 rank autocorrelation
+      is significantly negative (rho_{12} = -0.30129 vs critical bound 0.29889), yielding eta = 0.780520,
+      which increases |Z*| to 6.23 compared to original MK Z = 5.50.
+    - Sensitivity to Lag Selection:
+      Because all lags up to n-1 are scanned, high-order empirical autocorrelations (e.g. lag 12 in an n=43
+      annual series) can cross the critical threshold by chance or due to multi-year quasi-periodicities.
+    - Complementary Inferential Roles:
+      Original Mann-Kendall and Hamed-Rao modified Mann-Kendall address related but distinct inferential
+      questions (pure i.i.d. null vs AR-corrected null). Neither test is universally conservative across all
+      autocorrelation structures. In the dashboard, both statistics are presented side by side.
+    
     Provides complete intermediate calculation diagnostics.
     """
     y = np.asarray(data, dtype=float)
