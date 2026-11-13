@@ -1,0 +1,1 @@
+# EarthTrend Explorer - Tests package
