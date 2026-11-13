@@ -124,6 +124,7 @@ def hamed_rao_modified_mann_kendall(
     Computes the Hamed & Rao (1998) Modified Mann-Kendall test.
     Corrects the variance of S (var_s) for statistically significant serial autocorrelation
     in the detrended ranks of the series.
+    Provides complete intermediate calculation diagnostics.
     """
     y = np.asarray(data, dtype=float)
     y_clean = y[~np.isnan(y)]
@@ -132,27 +133,63 @@ def hamed_rao_modified_mann_kendall(
     if n < 4:
         raise ValueError(f"Hamed-Rao test requires at least 4 observations, got {n}.")
 
-    if HAS_PYMK:
-        res = pmk.hamed_rao_modification_test(y_clean, alpha=alpha)
-        trend = str(res.trend)
-        h = bool(res.h)
-        p_val = float(res.p)
-        z_val = float(res.z)
-        tau_val = float(res.Tau)
-        s_val = float(res.s)
-        var_s = float(res.var_s)
-        slope = float(res.slope)
+    # 1. Base test statistic S and original variance
+    base_res = mann_kendall_test(y_clean, alpha=alpha)
+    s_val = base_res["s_statistic"]
+    original_var_s = base_res["var_s"]
+    slope = base_res["sen_slope"]
+
+    # 2. Hamed & Rao (1998) variance correction calculation
+    x_detrend = y_clean - np.arange(1, n + 1) * slope
+    ranks = stats.rankdata(x_detrend)
+    mean_r = np.mean(ranks)
+    var_r = np.var(ranks)
+
+    # Detrended rank autocorrelations
+    crit_bound = float(stats.norm.ppf(1.0 - alpha / 2.0) / math.sqrt(n))
+    sig_lags: List[Dict[str, Any]] = []
+    sni = 0.0
+
+    for i in range(1, n):
+        if var_r > 0:
+            c_i = float(np.sum((ranks[i:] - mean_r) * (ranks[:-i] - mean_r)) / n)
+            rho_i = c_i / var_r
+        else:
+            rho_i = 0.0
+
+        if abs(rho_i) > crit_bound:
+            sig_lags.append({"lag": i, "rho": round(rho_i, 5)})
+            term = (n - i) * (n - i - 1) * (n - i - 2) * rho_i
+            sni += term
+
+    corr_factor = 1.0 + (2.0 / (n * (n - 1) * (n - 2))) * sni
+    corrected_var_s = float(original_var_s * corr_factor)
+
+    # Standardized Z with corrected variance
+    if s_val > 0:
+        z_val = (s_val - 1.0) / math.sqrt(corrected_var_s)
+    elif s_val < 0:
+        z_val = (s_val + 1.0) / math.sqrt(corrected_var_s)
     else:
-        # Fallback to standard test if pymannkendall is missing
-        base = mann_kendall_test(y_clean, alpha=alpha)
-        trend = base["trend"]
-        h = base["is_significant"]
-        p_val = base["p_value"]
-        z_val = base["z_statistic"]
-        tau_val = base["tau"]
-        s_val = base["s_statistic"]
-        var_s = base["var_s"]
-        slope = base["sen_slope"]
+        z_val = 0.0
+
+    p_val = float(2.0 * (1.0 - stats.norm.cdf(abs(z_val))))
+    h = bool(p_val < alpha)
+    trend = "increasing" if (h and z_val > 0) else ("decreasing" if (h and z_val < 0) else "no trend")
+    tau_val = float(s_val / (0.5 * n * (n - 1)))
+
+    if len(sig_lags) == 0:
+        diag_explanation = (
+            f"All {n-1} detrended rank autocorrelations fall within the Bartlett 95% white noise bound "
+            f"[±{crit_bound:.4f}]. Thus sni = 0.0 and the variance correction factor n/n* = 1.000000. "
+            f"The equality Var*(S) == Var(S) = {original_var_s:.2f} is mathematically expected and proves "
+            "the trend is not an artifact of serial correlation."
+        )
+    else:
+        diag_explanation = (
+            f"Found {len(sig_lags)} significant detrended rank autocorrelation lags exceeding ±{crit_bound:.4f}. "
+            f"Variance correction factor n/n* = {corr_factor:.4f}, adjusting Var(S) from {original_var_s:.2f} to {corrected_var_s:.2f}."
+        )
 
     return {
         "test_name": "Hamed & Rao (1998) Modified Mann-Kendall Test",
@@ -162,11 +199,18 @@ def hamed_rao_modified_mann_kendall(
         "z_statistic": z_val,
         "tau": tau_val,
         "s_statistic": s_val,
-        "var_s": var_s,
+        "original_var_s": original_var_s,
+        "corrected_var_s": corrected_var_s,
+        "var_s": corrected_var_s,
+        "variance_correction_factor": round(corr_factor, 6),
+        "significant_lags_count": len(sig_lags),
+        "significant_lags": sig_lags,
+        "critical_bound": crit_bound,
         "sen_slope": slope,
         "alpha": alpha,
         "sample_size": n,
-        "interpretation": f"{'Significant' if h else 'No significant'} trend under Hamed-Rao autocorrelation correction (p = {p_val:.4e})",
+        "explanation": diag_explanation,
+        "interpretation": f"{'Significant' if h else 'No significant'} trend under Hamed-Rao correction (p = {p_val:.4e})",
     }
 
 
@@ -270,8 +314,10 @@ def compute_calendar_month_breakdown(
 ) -> pd.DataFrame:
     """
     Rigorously tests each of the 12 individual calendar months separately.
+    Includes both nominal p-values and multiple testing adjustments:
+    - Holm-Bonferroni (Family-Wise Error Rate control)
+    - Benjamini-Hochberg (False Discovery Rate control)
     Prevents overgeneralized claims like 'warming is present in all 12 individual months'.
-    Returns a DataFrame with per-month Mann-Kendall and OLS statistics.
     """
     rows = []
     month_names_list = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
@@ -318,7 +364,39 @@ def compute_calendar_month_breakdown(
                 "ols_p_value": 1.0,
             })
 
-    return pd.DataFrame(rows)
+    res_df = pd.DataFrame(rows)
+    m = len(res_df)
+    p_vals = res_df["p_value"].values
+    sorted_idx = np.argsort(p_vals)
+    sorted_p = p_vals[sorted_idx]
+
+    # 1. Holm-Bonferroni (FWER)
+    holm_p = np.zeros(m)
+    for k in range(m):
+        holm_p[k] = sorted_p[k] * (m - k)
+    for k in range(1, m):
+        holm_p[k] = max(holm_p[k], holm_p[k - 1])
+    holm_p = np.clip(holm_p, 0.0, 1.0)
+    holm_adj = np.zeros(m)
+    holm_adj[sorted_idx] = holm_p
+
+    # 2. Benjamini-Hochberg (FDR)
+    bh_p = np.zeros(m)
+    for k in range(m):
+        bh_p[k] = sorted_p[k] * m / (k + 1)
+    for k in range(m - 2, -1, -1):
+        bh_p[k] = min(bh_p[k], bh_p[k + 1])
+    bh_p = np.clip(bh_p, 0.0, 1.0)
+    bh_adj = np.zeros(m)
+    bh_adj[sorted_idx] = bh_p
+
+    res_df["p_holm"] = np.round(holm_adj, 5)
+    res_df["p_bh"] = np.round(bh_adj, 5)
+    res_df["sig_nominal"] = res_df["p_value"] < alpha
+    res_df["sig_holm"] = res_df["p_holm"] < alpha
+    res_df["sig_bh"] = res_df["p_bh"] < alpha
+
+    return res_df
 
 
 def compute_sens_slope(

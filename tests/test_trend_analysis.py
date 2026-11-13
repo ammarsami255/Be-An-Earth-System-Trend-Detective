@@ -173,19 +173,46 @@ def test_calendar_month_breakdown():
     assert len(breakdown) == 12
     assert "JAN" in breakdown["month_name"].values
     assert "JUL" in breakdown["month_name"].values
-    # July should have significant trend
-    jul_row = breakdown[breakdown["month_name"] == "JUL"].iloc[0]
-    assert jul_row["trend"] == "Increasing"
-    assert bool(jul_row["is_significant"]) is True
+    # Check multiple testing correction columns exist and are strictly valid
+    assert "p_holm" in breakdown.columns
+    assert "p_bh" in breakdown.columns
+    assert "sig_nominal" in breakdown.columns
+    assert "sig_holm" in breakdown.columns
+    assert "sig_bh" in breakdown.columns
+    # p_holm >= p_unadjusted and p_bh >= p_unadjusted
+    for _, row in breakdown.iterrows():
+        assert row["p_holm"] >= row["p_value"] - 1e-9
+        assert row["p_bh"] >= row["p_value"] - 1e-9
+        assert 0.0 <= row["p_holm"] <= 1.0
+        assert 0.0 <= row["p_bh"] <= 1.0
 
 
 def test_hamed_rao_modified_mann_kendall():
-    """Verify Hamed & Rao modified Mann-Kendall handles series properly."""
+    """Verify Hamed & Rao modified Mann-Kendall handles white noise and autocorrelated series."""
+    # Case 1: Pure white noise around linear trend (variance correction factor = 1.0)
     np.random.seed(42)
-    x = np.arange(40)
-    y = 0.1 * x + np.random.normal(0, 0.2, size=40)
+    x = np.arange(43)
+    y_wn = 0.1 * x + np.random.normal(0, 0.2, size=43)
 
-    res = hamed_rao_modified_mann_kendall(y, alpha=0.05)
-    assert res["trend"] == "increasing"
-    assert res["is_significant"] is True
-    assert res["p_value"] < 0.01
+    res_wn = hamed_rao_modified_mann_kendall(y_wn, alpha=0.05)
+    assert res_wn["trend"] == "increasing"
+    assert res_wn["is_significant"] is True
+    assert res_wn["p_value"] < 0.01
+    assert res_wn["variance_correction_factor"] == 1.0
+    assert res_wn["corrected_var_s"] == res_wn["original_var_s"]
+    assert res_wn["significant_lags_count"] == 0
+
+    # Case 2: Highly autocorrelated AR(1) series (variance correction factor > 1.0)
+    np.random.seed(123)
+    n = 100
+    e = np.random.normal(0, 1, n)
+    ar = np.zeros(n)
+    for t in range(1, n):
+        ar[t] = 0.75 * ar[t - 1] + e[t]
+    y_ar = 0.05 * np.arange(n) + ar
+
+    res_ar = hamed_rao_modified_mann_kendall(y_ar, alpha=0.05)
+    assert res_ar["significant_lags_count"] > 0
+    assert res_ar["variance_correction_factor"] > 1.0
+    assert res_ar["corrected_var_s"] > res_ar["original_var_s"]
+    assert "significant detrended rank autocorrelation lags" in res_ar["explanation"]

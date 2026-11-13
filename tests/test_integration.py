@@ -92,8 +92,11 @@ def test_full_pipeline_cairo_t2m(real_cairo_dataset):
 
     cal_df = compute_calendar_month_breakdown(clean_df)
     assert len(cal_df) == 12
-    # Verify that 8 months are significant and 4 are not
+    # Verify nominal significance vs multiple-testing adjusted significance
     assert cal_df["is_significant"].sum() == 8
+    assert cal_df["sig_nominal"].sum() == 8
+    assert cal_df["sig_bh"].sum() == 6
+    assert cal_df["sig_holm"].sum() == 5
 
     # 6. Synthesis of 4 questions
     answers = synthesize_scientific_answers(

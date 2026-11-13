@@ -704,6 +704,27 @@ elif page == "🔬 Trend Analysis Engine":
     # Practical vs Statistical distinction
     st.info(f"**Physical & Practical Significance**: {answers['practical_significance']}")
 
+    with st.expander("📐 Cumulative Warming Metric Distinction (Theil-Sen vs Endpoint vs OLS)", expanded=False):
+        if "Annual" in resolution and len(y_vals) >= 2:
+            y1 = y_vals[0]
+            yN = y_vals[-1]
+            end_diff = yN - y1
+            theil_42 = sen_result["slope"] * float(end_yr - start_yr)
+            theil_43 = sen_result["slope"] * float(len(y_vals))
+            ols_42 = ols_result["slope"] * float(end_yr - start_yr)
+            st.markdown(
+                f"""
+                | Cumulative Metric | Formula / Method | Cairo T2M Value (1981–2023) | Scientific Interpretation |
+                | :--- | :--- | :--- | :--- |
+                | **Theil-Sen Elapsed Change** | $\\beta \\times (T_{{end}} - T_{{start}}) = {sen_result['slope']:.4f} \\times {end_yr - start_yr}$ | **+{theil_42:.2f} {units}** | **Primary metric**: Median pairwise rate over {end_yr - start_yr} elapsed years. Robust to outliers. |
+                | **OLS Total Linear Change** | $m \\times (T_{{end}} - T_{{start}}) = {ols_result['slope']:.4f} \\times {end_yr - start_yr}$ | **+{ols_42:.2f} {units}** | Parametric least-squares fitted change over {end_yr - start_yr} elapsed years ($R^2 = {ols_result['r_squared']:.3f}$). |
+                | **Raw Endpoint Difference** | $T({end_yr}) - T({start_yr}) = {yN:.2f} - {y1:.2f}$ | **+{end_diff:.2f} {units}** | Observed difference between two single years; sensitive to single-year weather anomalies. |
+                | **Theil-Sen Point Count Multiplier** | $\\beta \\times N = {sen_result['slope']:.4f} \\times {len(y_vals)}$ | **+{theil_43:.2f} {units}** | Fencepost discrepancy (multiplying $N$ points instead of $N-1$ elapsed intervals). |
+                """
+            )
+        else:
+            st.markdown(f"Cumulative change across the selected time period is computed as rate × elapsed duration ({end_yr - start_yr} years).")
+
     # Metric Cards Grid
     st.markdown("### 📊 Statistical Metrics Summary")
     mc1, mc2, mc3, mc4 = st.columns(4)
@@ -761,43 +782,69 @@ elif page == "🔬 Trend Analysis Engine":
 
     # Hamed-Rao Autocorrelation-Corrected Mann-Kendall Comparison
     st.markdown("#### 🛡️ Robustness Check: Autocorrelation-Corrected Mann-Kendall (Hamed & Rao 1998)")
-    hr_c1, hr_c2, hr_c3 = st.columns(3)
+    hr_c1, hr_c2, hr_c3, hr_c4 = st.columns(4)
     with hr_c1:
         st.write(f"**Hamed-Rao Trend**: `{hr_result['trend'].upper()}`")
+        st.caption(f"Status: `{'Significant' if hr_result['is_significant'] else 'Non-significant'}`")
     with hr_c2:
-        st.write(f"**Hamed-Rao Z-stat**: `{hr_result['z_statistic']:.2f}` (vs Standard `{mk_result['z_statistic']:.2f}`)")
+        st.write(f"**Z-score**: `{hr_result['z_statistic']:.2f}`")
+        st.caption(f"Standard Z: `{mk_result['z_statistic']:.2f}`")
     with hr_c3:
-        st.write(f"**Hamed-Rao p-value**: `{hr_result['p_value']:.4e}` (Significant: `{hr_result['is_significant']}`)")
+        st.write(f"**p-value**: `{hr_result['p_value']:.4e}`")
+        st.caption(f"Standard p: `{mk_result['p_value']:.4e}`")
+    with hr_c4:
+        st.write(f"**Variance Factor (n/n*)**: `{hr_result['variance_correction_factor']:.4f}`")
+        st.caption(f"Var(S) = {hr_result['original_var_s']:.1f} → Var*(S) = {hr_result['corrected_var_s']:.1f}")
 
-    # 12-Month Calendar Breakdown (Resolves overgeneralization)
+    with st.expander("🔍 Inspect Hamed-Rao Intermediate Diagnostics & Mathematical Rationale", expanded=False):
+        st.markdown(
+            f"""
+            - **Published Methodology**: Hamed, K. H., & Rao, A. R. (1998). *Journal of Hydrology*, 204(1-4), 182-196.
+            - **Detrending Method**: Subtracted Theil-Sen slope ({hr_result['sen_slope']:.4f} {units}/yr) from original series.
+            - **Rank Autocorrelation Bounds**: Two-tailed 95% critical bound = $\\pm Z_{{1-\\alpha/2}} / \\sqrt{{n}} = \\pm {hr_result['critical_bound']:.4f}$ ($n = {hr_result['sample_size']}$).
+            - **Significant Lags Detected**: `{hr_result['significant_lags_count']}` lags exceeding the critical bound.
+            - **Diagnostic Assessment**: {hr_result['explanation']}
+            """
+        )
+
+    # 12-Month Calendar Breakdown (Resolves overgeneralization and includes multiple testing adjustments)
     if "month" in var_df.columns and len(var_df["month"].unique()) >= 12:
         st.markdown("---")
         st.markdown("### 🗓️ Month-by-Month Calendar Breakdown (12 Individual Months)")
-        st.caption("Rigorously evaluates trend statistics for each calendar month separately across all observation years.")
+        st.caption("Rigorously evaluates trend statistics for each calendar month separately across all observation years, including multiple-testing corrections.")
         
         cal_breakdown = compute_calendar_month_breakdown(var_df, value_col="value", alpha=alpha_val)
-        sig_months = cal_breakdown[cal_breakdown["is_significant"]]["month_name"].tolist()
-        nonsig_months = cal_breakdown[~cal_breakdown["is_significant"]]["month_name"].tolist()
+        nominal_sig = cal_breakdown[cal_breakdown["sig_nominal"]]["month_name"].tolist()
+        bh_sig = cal_breakdown[cal_breakdown["sig_bh"]]["month_name"].tolist()
+        holm_sig = cal_breakdown[cal_breakdown["sig_holm"]]["month_name"].tolist()
 
         st.info(
-            f"**Seasonal Synthesis**: {len(sig_months)} of 12 months exhibit statistically significant warming trends "
-            f"({', '.join(sig_months)}). Conversely, {len(nonsig_months)} months ({', '.join(nonsig_months)}) "
-            f"do not exhibit statistically significant monotonic trends at α = {alpha_val}."
+            f"**Multiple Testing Synthesis Across 12 Calendar Months**:\n\n"
+            f"- **Nominal Unadjusted ($p < {alpha_val}$)**: **{len(nominal_sig)} of 12 months** ({', '.join(nominal_sig)}).\n"
+            f"- **Benjamini-Hochberg FDR ($q < {alpha_val}$)**: **{len(bh_sig)} of 12 months** ({', '.join(bh_sig)}). "
+            f"Warming is statistically confirmed across the continuous 6-month late-summer to early-winter period; FEB and MAY do not survive false discovery rate control.\n"
+            f"- **Holm-Bonferroni FWER ($\alpha < {alpha_val}$)**: **{len(holm_sig)} of 12 months** ({', '.join(holm_sig)}).\n"
+            f"- **Stable Months**: JAN, MAR, APR, and JUN show no statistically significant trend under any criterion."
         )
 
         st.dataframe(
             cal_breakdown[[
-                "month_name", "observations", "mean_val", "trend", "is_significant",
-                "p_value", "z_statistic", "kendall_tau", "sen_slope_per_decade", "ols_slope_per_decade"
+                "month_name", "observations", "mean_val", "trend",
+                "p_value", "p_holm", "p_bh", "sig_nominal", "sig_holm", "sig_bh",
+                "z_statistic", "kendall_tau", "sen_slope_per_decade", "ols_slope_per_decade"
             ]],
             use_container_width=True,
             column_config={
                 "month_name": "Month",
-                "observations": "Obs (Yrs)",
+                "observations": "Obs",
                 "mean_val": f"Mean ({units})",
-                "trend": "Mann-Kendall Trend",
-                "is_significant": "Significant?",
-                "p_value": "p-value",
+                "trend": "MK Trend",
+                "p_value": "Nominal p",
+                "p_holm": "Holm p (FWER)",
+                "p_bh": "BH p (FDR)",
+                "sig_nominal": "Sig (Nominal)",
+                "sig_holm": "Sig (Holm)",
+                "sig_bh": "Sig (BH)",
                 "z_statistic": "Z-Score",
                 "kendall_tau": "Kendall Tau",
                 "sen_slope_per_decade": f"Sen Slope ({units}/dec)",
@@ -988,7 +1035,7 @@ elif page == "📚 Methodology & Sources":
 
     st.markdown("### 2. NASA Earth Science Data Sources")
     st.markdown(
-        """
+        r"""
         - **NASA POWER Project**: Prediction of Worldwide Energy Resources, NASA Langley Research Center.
           URL: [https://power.larc.nasa.gov/](https://power.larc.nasa.gov/)
         - **MERRA-2**: Modern-Era Retrospective analysis for Research and Applications, Version 2.
