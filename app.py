@@ -71,7 +71,7 @@ st.set_page_config(
     page_title="EarthTrend Explorer | NASA Space Apps 2026",
     page_icon="🌍",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 # Custom NASA-inspired CSS
@@ -293,6 +293,254 @@ st.markdown(
         color: #FFFFFF;
         background: rgba(252, 61, 33, 0.18);
     }
+
+    /* =====================================================
+       DASHBOARD LAYOUT (top navbar, no sidebar)
+       ===================================================== */
+    section[data-testid="stSidebar"],
+    div[data-testid="stSidebarCollapsedControl"],
+    button[data-testid="stExpandSidebarButton"],
+    .stAppDeployButton,
+    div[data-testid="stToolbar"] {
+        display: none !important;
+    }
+    header[data-testid="stHeader"] {
+        background: transparent;
+        height: 0;
+    }
+    .block-container {
+        padding-top: 1.1rem !important;
+        padding-bottom: 3rem;
+        max-width: 1320px;
+    }
+
+    /* ---------- Top bar ---------- */
+    .st-key-topbar {
+        position: sticky;
+        top: 0.5rem;
+        z-index: 999;
+        background: rgba(11, 20, 40, 0.82);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        border-radius: 16px;
+        padding: 8px 14px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        margin-bottom: 10px;
+    }
+    .st-key-topbar div[data-testid="stHorizontalBlock"] { gap: 0.6rem; }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-logo {
+        font-size: 1.55rem;
+        width: 40px; height: 40px;
+        display: inline-flex; align-items: center; justify-content: center;
+        border-radius: 12px;
+        background: radial-gradient(circle at 30% 30%, #2B6BFF, #0B3D91);
+        box-shadow: 0 0 18px rgba(76, 141, 255, 0.45);
+    }
+    .brand-name { font-weight: 800; font-size: 1.12rem; color: #FFFFFF; letter-spacing: -0.01em; line-height: 1.1; }
+    .brand-tag { font-size: 0.7rem; color: #94A3B8; letter-spacing: 0.04em; }
+
+    /* navigation radio -> pill tabs */
+    .st-key-topbar div[data-testid="stRadio"] div[role="radiogroup"] {
+        gap: 4px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    .st-key-topbar label[data-testid="stRadioOption"] {
+        margin: 0 !important;
+        padding: 6px 12px !important;
+        border-radius: 999px;
+        border: 1px solid transparent;
+        transition: all 0.15s ease;
+        cursor: pointer;
+    }
+    .st-key-topbar label[data-testid="stRadioOption"] > div > div:first-child { display: none !important; } /* hide radio dot */
+    .st-key-topbar label[data-testid="stRadioOption"] p {
+        font-size: 0.86rem !important;
+        font-weight: 600 !important;
+        color: #A8B6CC !important;
+        white-space: nowrap;
+    }
+    .st-key-topbar label[data-testid="stRadioOption"]:hover {
+        background: rgba(76, 141, 255, 0.12);
+    }
+    .st-key-topbar label[data-testid="stRadioOption"]:hover p { color: #FFFFFF !important; }
+    .st-key-topbar label[data-testid="stRadioOption"]:has(input:checked) {
+        background: linear-gradient(135deg, rgba(252, 61, 33, 0.95), rgba(255, 110, 70, 0.9));
+        border-color: rgba(255, 140, 110, 0.6);
+        box-shadow: 0 4px 16px rgba(252, 61, 33, 0.35);
+    }
+    .st-key-topbar label[data-testid="stRadioOption"]:has(input:checked) p { color: #FFFFFF !important; }
+    .st-key-topbar div[data-testid="stSelectbox"] > div { margin: 0; }
+    .st-key-topbar div[data-baseweb="select"] > div {
+        border-radius: 999px !important;
+        background: rgba(76, 141, 255, 0.10) !important;
+        border-color: rgba(76, 141, 255, 0.35) !important;
+        font-weight: 600;
+    }
+    .st-key-topbar div[data-testid="stPopover"] button {
+        border-radius: 999px !important;
+        border: 1px solid rgba(148, 163, 184, 0.3) !important;
+        background: rgba(148, 163, 184, 0.08) !important;
+    }
+
+    /* ---------- Context strip ---------- */
+    .context-strip {
+        display: flex; flex-wrap: wrap; gap: 8px;
+        margin: 2px 4px 18px 4px;
+    }
+    .context-strip span {
+        font-size: 0.76rem;
+        color: #94A3B8;
+        background: rgba(148, 163, 184, 0.07);
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        padding: 3px 10px;
+        border-radius: 999px;
+    }
+    .context-strip span:first-child { color: #E6EDF7; border-color: rgba(252, 61, 33, 0.45); }
+
+    /* ---------- Hero (Home) ---------- */
+    .hero {
+        position: relative;
+        overflow: hidden;
+        padding: 44px 40px 40px 40px;
+        border-radius: 22px;
+        margin-bottom: 22px;
+        border: 1px solid rgba(124, 196, 255, 0.22);
+        background:
+            radial-gradient(520px 260px at 88% 10%, rgba(255, 90, 60, 0.30), transparent 70%),
+            radial-gradient(700px 360px at 10% 120%, rgba(76, 141, 255, 0.35), transparent 70%),
+            linear-gradient(135deg, #0A1A3F 0%, #071026 100%);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+    }
+    .hero::after {
+        content: "";
+        position: absolute; inset: 0; pointer-events: none;
+        background-image:
+            radial-gradient(1px 1px at 12% 22%, rgba(255,255,255,0.8), transparent),
+            radial-gradient(1px 1px at 32% 68%, rgba(255,255,255,0.5), transparent),
+            radial-gradient(1.5px 1.5px at 58% 18%, rgba(255,255,255,0.7), transparent),
+            radial-gradient(1px 1px at 76% 58%, rgba(255,255,255,0.5), transparent),
+            radial-gradient(1px 1px at 90% 82%, rgba(255,255,255,0.6), transparent),
+            radial-gradient(1px 1px at 46% 40%, rgba(255,255,255,0.4), transparent);
+    }
+    .hero-eyebrow {
+        font-size: 0.78rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+        color: #FF8A70; margin-bottom: 10px;
+    }
+    .hero-title {
+        font-size: clamp(2.2rem, 4.6vw, 3.6rem);
+        font-weight: 800; line-height: 1.05; letter-spacing: -0.03em;
+        color: #FFFFFF;
+    }
+    .hero-lead { margin-top: 14px; font-size: 1.15rem; color: #C7D2E3; max-width: 760px; line-height: 1.55; }
+    .hero-answer {
+        display: inline-block;
+        padding: 0 10px; margin: 0 2px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #FC3D21, #FF7A45);
+        color: #FFFFFF; font-weight: 800;
+    }
+
+    /* ---------- KPI cards ---------- */
+    .kpi-card {
+        position: relative;
+        height: 100%;
+        min-height: 128px;
+        padding: 18px 18px 16px 18px;
+        border-radius: 16px;
+        background: linear-gradient(180deg, #11203D 0%, #0B162D 100%);
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        box-shadow: 0 8px 26px rgba(0, 0, 0, 0.30);
+        overflow: hidden;
+        transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+    .kpi-card:hover { transform: translateY(-3px); }
+    .kpi-card::before {
+        content: ""; position: absolute; left: 0; top: 0; right: 0; height: 3px;
+        background: var(--kpi-accent, #4C8DFF);
+    }
+    .kpi-card::after {
+        content: ""; position: absolute; right: -40px; top: -40px; width: 120px; height: 120px;
+        border-radius: 50%;
+        background: radial-gradient(circle, var(--kpi-glow, rgba(76,141,255,0.25)), transparent 70%);
+    }
+    .kpi-red    { --kpi-accent: #FF5A3C; --kpi-glow: rgba(255, 90, 60, 0.28); }
+    .kpi-orange { --kpi-accent: #F59E0B; --kpi-glow: rgba(245, 158, 11, 0.25); }
+    .kpi-blue   { --kpi-accent: #4C8DFF; --kpi-glow: rgba(76, 141, 255, 0.28); }
+    .kpi-green  { --kpi-accent: #34D399; --kpi-glow: rgba(52, 211, 153, 0.22); }
+    .kpi-slate  { --kpi-accent: #64748B; --kpi-glow: rgba(100, 116, 139, 0.20); }
+    .kpi-card:hover { border-color: var(--kpi-accent); }
+    .kpi-label {
+        font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+        color: #94A3B8; margin-bottom: 8px;
+    }
+    .kpi-value {
+        font-size: clamp(1.5rem, 2.6vw, 2.1rem); font-weight: 800; color: #FFFFFF;
+        letter-spacing: -0.02em; line-height: 1.1;
+    }
+    .kpi-sub { margin-top: 8px; font-size: 0.8rem; color: #94A3B8; line-height: 1.4; }
+
+    /* ---------- Page header ---------- */
+    .page-head { display: flex; align-items: center; gap: 16px; margin: 6px 0 20px 0; }
+    .page-icon {
+        font-size: 1.7rem; width: 56px; height: 56px; flex: none;
+        display: flex; align-items: center; justify-content: center;
+        border-radius: 16px;
+        background: linear-gradient(135deg, rgba(76,141,255,0.25), rgba(252,61,33,0.18));
+        border: 1px solid rgba(148, 163, 184, 0.18);
+    }
+    .page-title { font-size: 1.9rem; font-weight: 800; color: #FFFFFF; letter-spacing: -0.02em; line-height: 1.15; }
+    .page-sub { font-size: 0.95rem; color: #94A3B8; margin-top: 2px; }
+
+    /* ---------- Tabs ---------- */
+    div[data-testid="stTabs"] div[role="tablist"] {
+        gap: 6px;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+    }
+    div[data-testid="stTabs"] button[role="tab"] {
+        padding: 8px 16px;
+        border-radius: 10px 10px 0 0;
+    }
+    div[data-testid="stTabs"] button[role="tab"] p { font-weight: 600; font-size: 0.95rem; color: #A8B6CC; }
+    div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] { background: rgba(76, 141, 255, 0.10); }
+    div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] p { color: #FFFFFF; }
+    div[data-testid="stTabs"] div[data-baseweb="tab-highlight"] { background-color: #FC3D21; }
+
+    /* ---------- Findings list ---------- */
+    .finding {
+        display: flex; gap: 14px; align-items: flex-start;
+        padding: 14px 16px; margin-bottom: 10px;
+        border-radius: 14px;
+        background: rgba(15, 27, 51, 0.85);
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        color: #CBD5E1; font-size: 0.93rem; line-height: 1.55;
+    }
+    .finding-num {
+        flex: none; font-weight: 800; font-size: 0.85rem; color: #FF8A70;
+        background: rgba(252, 61, 33, 0.12); border: 1px solid rgba(252, 61, 33, 0.35);
+        border-radius: 8px; padding: 2px 8px;
+    }
+
+    .section-gap { height: 18px; }
+    /* headings of the original pages shown inside tabs become sub-headings */
+    div[data-testid="stTabs"] h2 {
+        font-size: 1.35rem !important;
+        border-bottom: none !important;
+        padding-bottom: 0 !important;
+        color: #E6EDF7 !important;
+    }
+    .footer {
+        margin-top: 48px; padding-top: 18px;
+        border-top: 1px solid rgba(148, 163, 184, 0.14);
+        text-align: center; font-size: 0.8rem; color: #64748B;
+    }
+    div[data-testid="stExpander"] details {
+        border-radius: 12px;
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        background: rgba(15, 27, 51, 0.6);
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -343,156 +591,12 @@ if "raw_df" not in st.session_state:
         st.session_state["active_location"] = "None"
 
 
-# Sidebar: Navigation and Data Controls
-with st.sidebar:
-    st.markdown("### 🌍 EarthTrend Explorer")
-    st.caption("NASA Space Apps 2026 | Machine Without Learning")
-    st.markdown("---")
-
-    page = st.radio(
-        "Navigation",
-        [
-            "🏠 Home & Overview",
-            "📂 Data Explorer",
-            "📈 Interactive Time Series",
-            "🔬 Trend Analysis Engine",
-            "🗺️ Regional Comparison",
-            "🌧️ Rainfall Analysis",
-            "🔥 Temperature Extremes",
-            "⚠️ Anomaly Detection",
-            "📚 Methodology & Sources",
-        ],
-        index=0,
-    )
-
-    st.markdown("---")
-    st.markdown("#### 🛰️ Data Source Selection")
-
-    data_source_mode = st.selectbox(
-        "Source Mode",
-        [
-            "Authentic NASA Archive (Preset)",
-            "Upload NASA CSV (Giovanni / POWER)",
-            "Live NASA POWER API Query",
-        ],
-    )
-
-    if data_source_mode == "Authentic NASA Archive (Preset)":
-        preset_choice = st.selectbox(
-            "Select Egyptian Region",
-            ["Greater Cairo", "Alexandria", "Aswan"],
-            index=0,
-        )
-        file_map = {
-            "Greater Cairo": os.path.join("data", "raw", "nasa_power_cairo_1981_2023.csv"),
-            "Alexandria": os.path.join("data", "raw", "nasa_power_alexandria_1981_2023.csv"),
-            "Aswan": os.path.join("data", "raw", "nasa_power_aswan_1981_2023.csv"),
-        }
-        if st.button("Load Region Data", use_container_width=True):
-            with st.spinner(f"Loading {preset_choice} NASA dataset..."):
-                target_file = file_map[preset_choice]
-                df_loaded, meta_loaded = load_bundled_dataset(target_file, preset_choice)
-                st.session_state["raw_df"] = df_loaded
-                st.session_state["metadata"] = meta_loaded
-                st.session_state["active_location"] = preset_choice
-                st.success(f"Loaded {preset_choice} data successfully!")
-
-    elif data_source_mode == "Upload NASA CSV (Giovanni / POWER)":
-        uploaded_file = st.file_uploader(
-            "Upload CSV File",
-            type=["csv", "txt"],
-            help="Upload NASA Giovanni time series CSV or NASA POWER monthly table.",
-        )
-        custom_loc_label = st.text_input("Region Name", value="Uploaded Region")
-        if uploaded_file is not None:
-            if st.button("Parse Uploaded CSV", use_container_width=True):
-                with st.spinner("Parsing CSV and extracting metadata..."):
-                    try:
-                        content_str = uploaded_file.getvalue().decode("utf-8")
-                        df_up, meta_up = auto_load_dataset(content_str, default_location=custom_loc_label)
-                        st.session_state["raw_df"] = df_up
-                        st.session_state["metadata"] = meta_up
-                        st.session_state["active_location"] = custom_loc_label
-                        st.success(f"Loaded {len(df_up)} records!")
-                    except Exception as e:
-                        st.error(f"Error parsing file: {e}")
-
-    elif data_source_mode == "Live NASA POWER API Query":
-        st.caption("Live connection to NASA Langley Research Center MERRA-2 API")
-        lat_in = st.number_input("Latitude", value=30.0444, format="%.4f")
-        lon_in = st.number_input("Longitude", value=31.2357, format="%.4f")
-        start_y = st.number_input("Start Year", min_value=1981, max_value=2023, value=1981)
-        end_y = st.number_input("End Year", min_value=1981, max_value=2023, value=2023)
-        loc_name_in = st.text_input("Location Name", value="Custom Coordinates")
-
-        if st.button("Fetch Real NASA Data", use_container_width=True):
-            with st.spinner(f"Querying NASA POWER API for ({lat_in:.2f}, {lon_in:.2f})..."):
-                try:
-                    df_live, meta_live, raw_csv_live = fetch_nasa_power_point(
-                        latitude=lat_in,
-                        longitude=lon_in,
-                        start_year=int(start_y),
-                        end_year=int(end_y),
-                    )
-                    st.session_state["raw_df"] = df_live
-                    st.session_state["metadata"] = meta_live
-                    st.session_state["active_location"] = loc_name_in
-                    # Save locally
-                    save_path = os.path.join("data", "raw", f"nasa_power_custom_{int(start_y)}_{int(end_y)}.csv")
-                    with open(save_path, "w", encoding="utf-8") as f:
-                        f.write(raw_csv_live)
-                    st.success(f"Fetched {len(df_live)} records and cached locally!")
-                except Exception as e:
-                    st.error(f"NASA API Query Failed: {e}")
-
-    # Active dataset status in sidebar
-    st.markdown("---")
-    st.markdown("#### 📊 Active Dataset Context")
-    if not st.session_state["raw_df"].empty:
-        curr_loc = st.session_state["active_location"]
-        curr_meta = st.session_state["metadata"]
-        st.write(f"**Region**: {curr_loc}")
-        st.write(f"**Source**: {curr_meta.get('source', 'NASA')}")
-        if curr_meta.get("latitude") and curr_meta.get("longitude"):
-            st.write(f"**Coords**: {curr_meta['latitude']}°N, {curr_meta['longitude']}°E")
-        if curr_meta.get("elevation_m"):
-            st.write(f"**Elevation**: {curr_meta['elevation_m']} m")
-        avail_vars = curr_meta.get("available_variables", [])
-        st.write(f"**Variables**: {', '.join(avail_vars)}")
-    else:
-        st.warning("No dataset loaded yet.")
-
-
-# Top Banner Header
-st.markdown(
-    """
-    <div class="nasa-header">
-        <span class="nasa-badge">NASA Space Apps 2026</span>
-        <span class="nasa-subbadge">Challenge: Be An Earth System Trend Detective!</span>
-        <span class="nasa-subbadge">Team: Machine Without Learning</span>
-        <h1 style="margin-top: 10px;">EarthTrend Explorer</h1>
-        <p style="margin: 6px 0 0 0; opacity: 0.9; font-size: 0.95rem;">
-            Investigating Environmental Trends with Real NASA Earth Science Data (MERRA-2 & Satellite Observations)
-        </p>
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
-# Ensure data is present before proceeding with analytical pages
-df_current: pd.DataFrame = st.session_state.get("raw_df", pd.DataFrame())
-metadata_current: Dict[str, Any] = st.session_state.get("metadata", {})
-active_location: str = st.session_state.get("active_location", "Selected Region")
-
-if df_current.empty and page != "🏠 Home & Overview":
-    st.error("⚠️ No active dataset loaded. Please go to the sidebar and select or load a dataset.")
-    st.stop()
 
 
 # ==========================================
 # PAGE 1: HOME & OVERVIEW
 # ==========================================
-if page == "🏠 Home & Overview":
+def page_about() -> None:
     st.markdown("## 🔍 Mission: Be An Earth System Trend Detective!")
     st.markdown(
         """
@@ -628,7 +732,7 @@ if page == "🏠 Home & Overview":
 # ==========================================
 # PAGE 2: DATA EXPLORER
 # ==========================================
-elif page == "📂 Data Explorer":
+def page_data_explorer() -> None:
     st.markdown(f"## 📂 Data Explorer — {active_location}")
     st.markdown("Inspect, validate, and verify raw NASA Earth Science datasets and metadata.")
 
@@ -718,7 +822,7 @@ elif page == "📂 Data Explorer":
 # ==========================================
 # PAGE 3: INTERACTIVE TIME SERIES
 # ==========================================
-elif page == "📈 Interactive Time Series":
+def page_time_series() -> None:
     st.markdown(f"## 📈 Interactive Time Series — {active_location}")
 
     avail_vars = metadata_current.get("available_variables", sorted(df_current["variable"].unique().tolist()))
@@ -784,7 +888,7 @@ elif page == "📈 Interactive Time Series":
 # ==========================================
 # PAGE 4: TREND ANALYSIS ENGINE
 # ==========================================
-elif page == "🔬 Trend Analysis Engine":
+def page_trend_engine() -> None:
     st.markdown(f"## 🔬 Statistical Trend Engine — {active_location}")
     st.markdown("Rigorous non-parametric and parametric trend diagnostics answering the core scientific questions.")
 
@@ -1045,7 +1149,7 @@ elif page == "🔬 Trend Analysis Engine":
 # ==========================================
 # PAGE 5: REGIONAL COMPARISON
 # ==========================================
-elif page == "🗺️ Regional Comparison":
+def page_regional() -> None:
     st.markdown("## 🗺️ Regional Comparison Across Egypt")
     st.markdown(
         """
@@ -1176,285 +1280,9 @@ elif page == "🗺️ Regional Comparison":
 
 
 # ==========================================
-# PAGE: RAINFALL ANALYSIS
-# ==========================================
-elif page == "🌧️ Rainfall Analysis":
-    st.markdown("## 🌧️ Rainfall Trend Analysis")
-    st.markdown(
-        """
-        Is Egypt getting **wetter or drier**? Rainfall behaves very differently from temperature:
-        it falls almost only in the cool season, many months are completely dry, and a single
-        storm can dominate a whole year. This page therefore:
-
-        - converts NASA POWER `PRECTOTCORR` from a **rate (mm/day)** into **totals (mm/month, mm/year)**,
-        - analyses the **calendar-year total**, the **wet-season total (Oct → Mar)** and the **number of wet months (≥ 1 mm)**,
-        - uses non-parametric tests (Mann-Kendall, Hamed-Rao, Sen's slope) that are robust to skewed data,
-        - calls a trend significant **only if both Mann-Kendall and Hamed-Rao agree**, and flags results whose data are mostly zeros or ties.
-        """
-    )
-
-    rain_files = {
-        "Greater Cairo": os.path.join("data", "raw", "nasa_power_cairo_1981_2023.csv"),
-        "Alexandria": os.path.join("data", "raw", "nasa_power_alexandria_1981_2023.csv"),
-        "Aswan": os.path.join("data", "raw", "nasa_power_aswan_1981_2023.csv"),
-    }
-    rain_dfs = {
-        name: load_bundled_dataset(path, name)[0]
-        for name, path in rain_files.items()
-        if os.path.exists(path)
-    }
-
-    if not rain_dfs:
-        st.warning("Regional rainfall datasets are not available.")
-        st.stop()
-
-    rain_region = st.radio("Region", list(rain_dfs.keys()), horizontal=True)
-    rain_res = analyze_rainfall(rain_dfs[rain_region], rain_region)
-    t_ann = rain_res["trends"]["annual_total"]
-
-    # Headline metrics
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Mean annual rainfall", f"{t_ann['mean']:.1f} mm")
-    c2.metric("Dry months (< 1 mm)", f"{rain_res['dry_month_fraction'] * 100:.0f}%")
-    c3.metric("Sen's slope", f"{t_ann['sen_slope_per_decade']:+.2f} mm/dec", f"{t_ann['pct_of_mean_per_decade']:+.1f}% of mean / dec", delta_color="off")
-    c4.metric("Significant trend?", "YES" if t_ann["is_significant"] else "NO", f"MK p = {t_ann['mk_p']:.3f}", delta_color="off")
-
-    if t_ann["low_reliability"]:
-        st.warning("⚠️ **Low reliability for this region**: " + "; ".join(t_ann["reliability_notes"]) + ". Treat the trend numbers with caution.")
-
-    # 4 challenge questions
-    render_four_questions(rain_res["summary"], "Rainfall")
-
-    # Charts
-    rain_view = st.radio("Series", ["Calendar-year total", "Wet-season total (Oct–Mar)"], horizontal=True)
-    if rain_view == "Calendar-year total":
-        fig_rain = plot_rainfall_annual_totals(
-            rain_res["annual"], t_ann, rain_res["normal_mm"], rain_region, change_point=rain_res["change_point"]
-        )
-    else:
-        seasons = rain_res["seasons"]
-        base = seasons[(seasons["season_end_year"] >= 1981) & (seasons["season_end_year"] <= 2010)]
-        fig_rain = plot_rainfall_annual_totals(
-            seasons,
-            rain_res["trends"]["wet_season_total"],
-            float(base["total_mm"].mean()),
-            rain_region,
-            x_col="season_end_year",
-            title_prefix="Wet-Season (Oct–Mar) Rainfall Totals",
-        )
-    st.plotly_chart(fig_rain, use_container_width=True)
-    st.caption("Blue bars: above the 1981–2010 normal. Tan bars: below normal. Red line: Sen's slope trend. Purple dotted step: average level before/after a significant Pettitt shift. Wet seasons are labelled by the year they end (e.g. 2022 = Oct 2021–Mar 2022).")
-
-    # Abrupt shift (Pettitt)
-    st.markdown("### ⚡ Gradual Trend or Sudden Jump? (Pettitt Change-Point Test)")
-    st.markdown(
-        "Mann-Kendall only detects a **gradual** trend. The **Pettitt (1979)** test asks a different question: "
-        "did rainfall **jump to a new level** in a particular year?"
-    )
-    cp = rain_res["change_point"]
-    p1, p2, p3 = st.columns(3)
-    p1.metric("Abrupt shift?", "YES" if cp["is_significant"] else "NO", f"p = {cp['p_value']:.4f}", delta_color="off")
-    p2.metric("Shift starts in", str(cp["new_regime_start"]) if cp["is_significant"] else "—")
-    p3.metric(
-        "Mean before → after",
-        f"{cp['mean_before']:.0f} → {cp['mean_after']:.0f} mm",
-        f"{cp['pct_change']:+.0f}%" if cp["is_significant"] else None,
-        delta_color="off",
-    )
-    if cp["is_significant"]:
-        st.warning(
-            f"**{cp['interpretation']}** Rainfall did not rise gradually — it jumped. "
-            "Pettitt tells us **when** the shift happened, not **why**: it could be a real change in storm frequency "
-            "(e.g. the severe storms of late 2016 and March 2020) or a change in the observations feeding the MERRA-2 "
-            "reanalysis. Confirming it requires an independent dataset such as NASA GPM IMERG."
-        )
-    else:
-        st.success(cp["interpretation"])
-
-    st.plotly_chart(plot_rainfall_monthly_climatology(rain_res["climatology"], rain_region), use_container_width=True)
-
-    # Trend table for the 3 metrics
-    st.markdown("### 📊 Trend Tests for Three Rainfall Metrics")
-    metric_labels = {
-        "annual_total": "Calendar-year total (mm)",
-        "wet_season_total": "Wet-season total, Oct–Mar (mm)",
-        "wet_months": "Number of wet months (≥ 1 mm)",
-    }
-    trend_rows = []
-    for key, label in metric_labels.items():
-        t = rain_res["trends"][key]
-        unit = "months" if key == "wet_months" else "mm"
-        trend_rows.append({
-            "Metric": label,
-            "Years": t["n_years"],
-            "Mean": round(t["mean"], 2),
-            f"Sen slope / decade": f"{t['sen_slope_per_decade']:+.2f} {unit}",
-            "95% CI / decade": f"[{t['sen_ci_per_decade'][0]:+.2f}, {t['sen_ci_per_decade'][1]:+.2f}]",
-            "MK Z": round(t["mk_z"], 2),
-            "MK p": round(t["mk_p"], 4),
-            "Hamed-Rao p": round(t["hr_p"], 4),
-            "Verdict": t["verdict"],
-            "Reliability": "Low: " + "; ".join(t["reliability_notes"]) if t["low_reliability"] else "OK",
-        })
-    st.dataframe(pd.DataFrame(trend_rows), use_container_width=True, hide_index=True)
-
-    # Wettest / driest years
-    st.markdown("### 🏆 Wettest and Driest Years (% of 1981–2010 normal)")
-    ranked = rain_res["annual"][["year", "total_mm", "pct_of_normal"]].rename(
-        columns={"year": "Year", "total_mm": "Total (mm)", "pct_of_normal": "% of normal"}
-    ).round(1)
-    w1, w2 = st.columns(2)
-    with w1:
-        st.markdown("**Wettest 5 years**")
-        st.dataframe(ranked.nlargest(5, "Total (mm)"), use_container_width=True, hide_index=True)
-    with w2:
-        st.markdown("**Driest 5 years**")
-        st.dataframe(ranked.nsmallest(5, "Total (mm)"), use_container_width=True, hide_index=True)
-
-    # Regional comparison
-    st.markdown("### 🗺️ Regional Rainfall Comparison")
-    all_annual = {name: analyze_rainfall(df_r, name)["annual"] for name, df_r in rain_dfs.items()}
-    st.plotly_chart(plot_regional_rainfall(all_annual), use_container_width=True)
-    st.dataframe(compare_regional_rainfall(rain_dfs), use_container_width=True, hide_index=True)
-
-    st.info(
-        "🌡️ vs 🌧️ **Key finding**: temperature in all three regions shows a statistically significant warming trend, "
-        "but rainfall shows **no statistically significant gradual trend** in any of them. Instead, Cairo and Alexandria "
-        "show a significant **abrupt upward shift** in the mid-2010s (Pettitt test), while Aswan shows neither. "
-        "Rainfall in Egypt varies so much from year to year that 43 years are not enough to tell whether this shift is a "
-        "lasting climate change, a cluster of unusual storms, or a change in the reanalysis input data."
-    )
-    st.markdown(
-        """
-        **Limitations**
-        - `PRECTOTCORR` is MERRA-2 **reanalysis** precipitation (model + observations, bias-corrected), not a rain-gauge record. Reanalysis rainfall is less reliable than reanalysis temperature, especially in very dry regions.
-        - Each region is a single ~50 km grid cell, not a city-wide or national average.
-        - A "wet month" is defined as ≥ 1 mm monthly total; results for wet-month counts depend on this threshold.
-        - In Aswan almost every month is dry, so trend tests have very little information to work with.
-        """
-    )
-
-
-# ==========================================
-# PAGE: TEMPERATURE EXTREMES
-# ==========================================
-elif page == "🔥 Temperature Extremes":
-    st.markdown("## 🔥 Temperature Extremes: Hottest and Coldest")
-    st.markdown(
-        """
-        People feel the **extremes**, not the average. NASA POWER gives, for every month, the **hottest value reached**
-        (`T2M_MAX`) and the **coldest value reached** (`T2M_MIN`). From these we build five yearly indices:
-
-        1. **Hottest value of the year**, the single highest monthly maximum.
-        2. **Coldest value of the year**, the single lowest monthly minimum.
-        3. **Unusually hot months**: months whose maximum is above the 1981–2010 **90th percentile** *for that calendar month*.
-        4. **Unusually cold months**: months whose minimum is below the 1981–2010 **10th percentile** *for that calendar month*.
-        5. **Monthly extreme range**: hottest minus coldest value in each month, averaged over the year.
-
-        A "hot July" is judged against other Julys, not against January. Under a stable 1981–2010 climate you would expect
-        about **1.2 unusually hot and 1.2 unusually cold months per year** (10% of 12 months).
-        """
-    )
-
-    ext_files = {
-        "Greater Cairo": os.path.join("data", "raw", "nasa_power_cairo_1981_2023.csv"),
-        "Alexandria": os.path.join("data", "raw", "nasa_power_alexandria_1981_2023.csv"),
-        "Aswan": os.path.join("data", "raw", "nasa_power_aswan_1981_2023.csv"),
-    }
-    ext_dfs = {name: load_bundled_dataset(path, name)[0] for name, path in ext_files.items() if os.path.exists(path)}
-    if not ext_dfs:
-        st.warning("Regional temperature datasets are not available.")
-        st.stop()
-
-    ext_region = st.radio("Region", list(ext_dfs.keys()), horizontal=True, key="ext_region")
-    ext_res = analyze_temperature_extremes(ext_dfs[ext_region], ext_region)
-    et = ext_res["trends"]
-
-    e1, e2, e3, e4 = st.columns(4)
-    e1.metric("Hottest of year", f"{et['annual_hottest']['sen_per_decade']:+.2f} °C/dec",
-              "significant" if et["annual_hottest"]["is_significant"] else "not significant", delta_color="off")
-    e2.metric("Coldest of year", f"{et['annual_coldest']['sen_per_decade']:+.2f} °C/dec",
-              "significant" if et["annual_coldest"]["is_significant"] else "not significant", delta_color="off")
-    e3.metric("Hot months", f"{et['hot_months']['sen_per_decade']:+.2f} /dec",
-              "significant" if et["hot_months"]["is_significant"] else "not significant", delta_color="off")
-    e4.metric("Cold months", f"{et['cold_months']['sen_per_decade']:+.2f} /dec",
-              "significant" if et["cold_months"]["is_significant"] else "not significant", delta_color="off")
-
-    render_four_questions(ext_res["summary"], "Temperature Extremes")
-
-    c_left, c_right = st.columns(2)
-    with c_left:
-        st.plotly_chart(plot_extreme_index(ext_res["annual"], "annual_hottest", et["annual_hottest"],
-                                           f"Hottest of Each Year", "°C", NASA_RED_HEX),
-                        use_container_width=True)
-    with c_right:
-        st.plotly_chart(plot_extreme_index(ext_res["annual"], "annual_coldest", et["annual_coldest"],
-                                           f"Coldest of Each Year", "°C", NASA_BLUE_HEX),
-                        use_container_width=True)
-
-    st.plotly_chart(plot_decadal_extreme_months(ext_res["decades"]), use_container_width=True)
-    st.caption("Bars show the average number of unusually hot / cold months per year in each decade. The 1980s contain only 9 years (1981–1989) and the 2020s only 4 (2020–2023).")
-
-    st.plotly_chart(plot_monthly_extreme_trends(ext_res["by_month_tmax"], ext_res["by_month_tmin"]), use_container_width=True)
-    st.caption("Each calendar month is tested separately (43 values each). Solid bars stay significant after Benjamini-Hochberg FDR correction for testing 12 months; faded bars do not.")
-
-    st.markdown("### 📊 All Five Indices")
-    idx_rows = []
-    for key, (label, unit) in METRIC_INFO.items():
-        t = et[key]
-        lo, hi = t["ci_per_decade"]
-        cp = t["pettitt"]
-        idx_rows.append({
-            "Index": label,
-            "Mean": round(t["mean"], 2),
-            "Slope / decade": f"{t['sen_per_decade']:+.2f} {unit}",
-            "95% CI": f"[{lo:+.2f}, {hi:+.2f}]",
-            "Slope method": t["slope_method"],
-            "MK p": f"{t['mk_p']:.2e}",
-            "Hamed-Rao p": f"{t['hr_p']:.2e}",
-            "Trend (both tests)": t["verdict"],
-            "Abrupt shift (Pettitt)": f"Yes, from {cp['new_regime_start']}" if cp["is_significant"] else "No",
-        })
-    st.dataframe(pd.DataFrame(idx_rows), use_container_width=True, hide_index=True)
-    st.caption("Counts (hot/cold months) are small integers with many ties, so Sen's median slope collapses to 0; their magnitude is given by OLS, while significance always comes from the rank-based Mann-Kendall and Hamed-Rao tests.")
-
-    st.markdown("### 🏆 Record Years")
-    ann_e = ext_res["annual"]
-    r1, r2 = st.columns(2)
-    with r1:
-        st.markdown("**5 hottest years (highest monthly maximum)**")
-        st.dataframe(ann_e.nlargest(5, "annual_hottest")[["year", "annual_hottest", "hottest_month"]]
-                     .rename(columns={"year": "Year", "annual_hottest": "Hottest (°C)", "hottest_month": "Month"}).round(2),
-                     use_container_width=True, hide_index=True)
-    with r2:
-        st.markdown("**5 coldest years (lowest monthly minimum)**")
-        st.dataframe(ann_e.nsmallest(5, "annual_coldest")[["year", "annual_coldest", "coldest_month"]]
-                     .rename(columns={"year": "Year", "annual_coldest": "Coldest (°C)", "coldest_month": "Month"}).round(2),
-                     use_container_width=True, hide_index=True)
-
-    st.markdown("### 🗺️ Regional Comparison of Extremes")
-    st.dataframe(compare_regional_extremes(ext_dfs), use_container_width=True, hide_index=True)
-
-    st.info(
-        "🔥 **Key finding**: in all three regions the **hottest value of the year is rising** and **unusually hot months are "
-        "becoming more frequent**. Unusually **cold** months are becoming **rarer** in Cairo and Aswan. The single coldest "
-        "value of the year shows no significant trend anywhere: one value per year is noisy, so a change there is harder to detect."
-    )
-    st.markdown(
-        """
-        **Limitations**
-        - Values are MERRA-2 reanalysis grid-cell extremes (~50 km), not station records; local extremes can be more severe.
-        - Percentile thresholds are estimated from 30 values per calendar month, so they carry sampling uncertainty.
-        - Hamed-Rao can produce a much smaller p-value than Mann-Kendall when autocorrelation is negative; a trend is
-          called significant only when **both** tests agree.
-        """
-    )
-
-
-# ==========================================
 # PAGE 6: ANOMALY DETECTION
 # ==========================================
-elif page == "⚠️ Anomaly Detection":
+def page_anomalies() -> None:
     st.markdown(f"## ⚠️ Climatological Anomaly Detection — {active_location}")
     st.markdown(
         """
@@ -1507,7 +1335,7 @@ elif page == "⚠️ Anomaly Detection":
 # ==========================================
 # PAGE 7: METHODOLOGY & SOURCES
 # ==========================================
-elif page == "📚 Methodology & Sources":
+def page_methodology() -> None:
     st.markdown("## 📚 Scientific Methodology & NASA Earth Science Provenance")
 
     st.markdown("### 1. Mathematical Formulations")
@@ -1568,3 +1396,552 @@ elif page == "📚 Methodology & Sources":
         5. Gelaro, R., et al. (2017). The Modern-Era Retrospective Analysis for Research and Applications, Version 2 (MERRA-2). *Journal of Climate*, 30(14), 5419–5454.
         """
     )
+
+
+# ==========================================
+# SHARED HELPERS FOR THE DASHBOARD LAYOUT
+# ==========================================
+PRESET_FILES: Dict[str, str] = {
+    "Greater Cairo": os.path.join("data", "raw", "nasa_power_cairo_1981_2023.csv"),
+    "Alexandria": os.path.join("data", "raw", "nasa_power_alexandria_1981_2023.csv"),
+    "Aswan": os.path.join("data", "raw", "nasa_power_aswan_1981_2023.csv"),
+}
+
+
+def preset_frames() -> Dict[str, pd.DataFrame]:
+    """The three bundled NASA POWER regions (disk reads are cached)."""
+    return {name: load_bundled_dataset(path, name)[0] for name, path in PRESET_FILES.items() if os.path.exists(path)}
+
+
+def analysis_region() -> str:
+    """Region used by the preset-based pages: the active region if it is a preset, else Greater Cairo."""
+    loc = st.session_state.get("active_location", "Greater Cairo")
+    return loc if loc in PRESET_FILES else "Greater Cairo"
+
+
+@st.cache_data(show_spinner=False)
+def cached_rainfall(region: str) -> Dict[str, Any]:
+    return analyze_rainfall(load_bundled_dataset(PRESET_FILES[region], region)[0], region)
+
+
+@st.cache_data(show_spinner=False)
+def cached_rainfall_table() -> pd.DataFrame:
+    return compare_regional_rainfall(preset_frames())
+
+
+@st.cache_data(show_spinner=False)
+def cached_extremes(region: str) -> Dict[str, Any]:
+    return analyze_temperature_extremes(load_bundled_dataset(PRESET_FILES[region], region)[0], region)
+
+
+@st.cache_data(show_spinner=False)
+def cached_extremes_table() -> pd.DataFrame:
+    return compare_regional_extremes(preset_frames())
+
+
+@st.cache_data(show_spinner=False)
+def cached_temperature_summary(region: str) -> Dict[str, Any]:
+    """Annual mean T2M trend for the Home hero."""
+    df = load_bundled_dataset(PRESET_FILES[region], region)[0]
+    ann = aggregate_to_annual(df[df["variable"] == "T2M"].dropna(subset=["value"]))
+    y, x = ann["value"].values, ann["year"].values
+    mk = mann_kendall_test(y)
+    sen = compute_sens_slope(y, x)
+    ols = compute_linear_regression(y, x)
+    acf = compute_autocorrelation(y, x)
+    answers = synthesize_scientific_answers(
+        mk, sen, ols, acf, "2-meter air temperature (T2M)", "°C", region, int(x.min()), int(x.max()), "annual"
+    )
+    return {"annual": ann[["year", "value"]].copy(), "mk": mk, "sen": sen, "answers": answers,
+            "start": int(x.min()), "end": int(x.max())}
+
+
+def kpi_card(col, label: str, value: str, sub: str, accent: str = "blue") -> None:
+    col.markdown(
+        f'<div class="kpi-card kpi-{accent}"><div class="kpi-label">{label}</div>'
+        f'<div class="kpi-value">{value}</div><div class="kpi-sub">{sub}</div></div>',
+        unsafe_allow_html=True,
+    )
+
+
+def page_header(icon: str, title: str, subtitle: str) -> None:
+    st.markdown(
+        f'<div class="page-head"><div class="page-icon">{icon}</div><div>'
+        f'<div class="page-title">{title}</div><div class="page-sub">{subtitle}</div></div></div>',
+        unsafe_allow_html=True,
+    )
+
+
+def go_to(page_name: str) -> None:
+    """Button callback: switch the top navigation to another page."""
+    st.session_state["nav"] = page_name
+
+
+# ==========================================
+# PAGE: HOME (dashboard hero)
+# ==========================================
+def page_home() -> None:
+    region = analysis_region()
+    temp = cached_temperature_summary(region)
+    ext = cached_extremes(region)
+    rain = cached_rainfall(region)
+
+    sen_year = temp["sen"]["slope"]
+    elapsed = temp["end"] - temp["start"]
+    net = sen_year * elapsed
+    warming = temp["mk"]["is_significant"] and sen_year > 0
+
+    ann_e = ext["annual"]
+    early = ann_e[ann_e["year"] <= 1990]["hot_months"].mean()
+    late = ann_e[ann_e["year"] >= 2011]["hot_months"].mean()
+    cp = rain["change_point"]
+
+    lead_tail = "— and the extremes are shifting too." if warming else "."
+    st.markdown(
+        f"""
+        <div class="hero">
+            <div class="hero-eyebrow">NASA Space Apps 2026 · Be An Earth System Trend Detective</div>
+            <div class="hero-title">Is {region} heating up?</div>
+            <div class="hero-lead">
+                {temp['end'] - temp['start'] + 1} years of NASA MERRA-2 data ({temp['start']}–{temp['end']}) say
+                <span class="hero-answer">{'YES' if warming else 'NOT CLEARLY'}</span> {lead_tail}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    k1, k2, k3, k4 = st.columns(4)
+    kpi_card(k1, "Net warming", f"{net:+.2f} °C", f"since {temp['start']} · {sen_year * 10:+.2f} °C per decade", "red")
+    if early > 0:
+        kpi_card(k2, "Unusually hot months", f"×{late / early:.1f}",
+                 f"{late:.1f}/yr in 2011–{temp['end']} vs {early:.1f}/yr in 1981–90", "orange")
+    else:
+        kpi_card(k2, "Unusually hot months", f"{late:.1f}/yr", f"in 2011–{temp['end']} (none in 1981–90)", "orange")
+    if cp["is_significant"]:
+        kpi_card(k3, "Rainfall jump", f"{cp['new_regime_start']}",
+                 f"{cp['mean_before']:.0f} → {cp['mean_after']:.0f} mm/yr (Pettitt p = {cp['p_value']:.3f})", "blue")
+    else:
+        kpi_card(k3, "Rainfall", "No shift", f"no gradual trend or abrupt jump (p = {cp['p_value']:.2f})", "blue")
+    p = temp["mk"]["p_value"]
+    kpi_card(k4, "Is it real?", "p < 0.001" if p < 0.001 else f"p = {p:.3f}",
+             "Mann-Kendall: warming is not chance" if temp["mk"]["is_significant"] else "not statistically significant",
+             "green")
+
+    st.markdown('<div class="section-gap"></div>', unsafe_allow_html=True)
+    tab_hi, tab_about = st.tabs(["✨ Highlights", "🎯 About the mission"])
+
+    with tab_hi:
+        chart_col, find_col = st.columns([3, 2], gap="large")
+        with chart_col:
+            mean_trend = {
+                "sen_intercept": temp["sen"]["intercept"],
+                "sen_slope_per_year": sen_year,
+                "sen_per_decade": sen_year * 10.0,
+                "slope_method": "Sen's slope",
+            }
+            ann_plot = temp["annual"].rename(columns={"value": "t2m"})
+            st.plotly_chart(
+                plot_extreme_index(ann_plot, "t2m", mean_trend, f"Annual Mean Temperature — {region}", "°C", NASA_RED_HEX),
+                use_container_width=True,
+            )
+        with find_col:
+            hot_word = "more frequent" if ext["trends"]["hot_months"]["is_significant"] else "not clearly more frequent"
+            if cp["is_significant"]:
+                rain_title = "Rain did not trend — it jumped."
+                rain_text = (f"Average rainfall shifted from {cp['mean_before']:.0f} to {cp['mean_after']:.0f} mm/yr "
+                             f"in {cp['new_regime_start']}.")
+            else:
+                rain_title = "Rain stayed noisy."
+                rain_text = "No gradual or abrupt change is detectable."
+            st.markdown("#### Three findings")
+            st.markdown(
+                f"""
+                <div class="finding"><span class="finding-num">01</span><div>
+                <b>The average is rising.</b> Mean temperature rose {sen_year * 10:+.2f} °C per decade,
+                about {net:+.1f} °C since {temp['start']}.</div></div>
+                <div class="finding"><span class="finding-num">02</span><div>
+                <b>The extremes moved.</b> The hottest value of the year rises
+                {ext['trends']['annual_hottest']['sen_per_decade']:+.2f} °C/decade and unusually hot months are
+                {hot_word}.</div></div>
+                <div class="finding"><span class="finding-num">03</span><div>
+                <b>{rain_title}</b> {rain_text}</div></div>
+                """,
+                unsafe_allow_html=True,
+            )
+            b1, b2, b3 = st.columns(3)
+            b1.button("Temperature →", on_click=go_to, args=("🌡️ Temperature",), use_container_width=True)
+            b2.button("Extremes →", on_click=go_to, args=("🔥 Extremes",), use_container_width=True)
+            b3.button("Rainfall →", on_click=go_to, args=("🌧️ Rainfall",), use_container_width=True)
+        render_four_questions(temp["answers"], f"Temperature in {region}")
+
+    with tab_about:
+        page_about()
+
+
+# ==========================================
+# PAGE: TEMPERATURE (tabs over the original pages)
+# ==========================================
+def page_temperature() -> None:
+    page_header("🌡️", f"Temperature — {active_location}",
+                "Mean 2-meter air temperature: time series, statistical trend tests and anomalies.")
+    t1, t2, t3 = st.tabs(["📈 Time series", "🔬 Trend statistics", "⚠️ Anomalies"])
+    with t1:
+        page_time_series()
+    with t2:
+        page_trend_engine()
+    with t3:
+        page_anomalies()
+
+
+# ==========================================
+# PAGE: RAINFALL
+# ==========================================
+def page_rainfall() -> None:
+    region = analysis_region()
+    res = cached_rainfall(region)
+    t_ann = res["trends"]["annual_total"]
+    cp = res["change_point"]
+
+    page_header("🌧️", f"Rainfall — {region}",
+                "NASA POWER PRECTOTCORR converted from mm/day to monthly and yearly totals.")
+    if active_location not in PRESET_FILES:
+        st.info(f"Rainfall analysis uses the bundled regions; showing {region}. Pick a region in the top bar to switch.")
+
+    k1, k2, k3, k4 = st.columns(4)
+    kpi_card(k1, "Mean annual rainfall", f"{t_ann['mean']:.0f} mm",
+             f"{res['dry_month_fraction'] * 100:.0f}% of months are dry (< 1 mm)", "blue")
+    kpi_card(k2, "Gradual trend", "YES" if t_ann["is_significant"] else "NO",
+             f"Sen {t_ann['sen_slope_per_decade']:+.1f} mm/decade · MK p = {t_ann['mk_p']:.2f}",
+             "green" if t_ann["is_significant"] else "slate")
+    kpi_card(k3, "Abrupt shift", str(cp["new_regime_start"]) if cp["is_significant"] else "None",
+             f"Pettitt p = {cp['p_value']:.4f}", "orange" if cp["is_significant"] else "slate")
+    kpi_card(k4, "Before → after", f"{cp['mean_before']:.0f} → {cp['mean_after']:.0f}",
+             f"mm/yr ({cp['pct_change']:+.0f}%)" if cp["is_significant"] else "mm/yr (not significant)",
+             "red" if cp["is_significant"] else "slate")
+    if t_ann["low_reliability"]:
+        st.warning("⚠️ **Low reliability for this region**: " + "; ".join(t_ann["reliability_notes"]) + ".")
+
+    st.markdown('<div class="section-gap"></div>', unsafe_allow_html=True)
+    tab_o, tab_c, tab_s, tab_r = st.tabs(["📋 Overview", "📊 Charts", "🔬 Statistics", "🗺️ Regions"])
+
+    with tab_o:
+        render_four_questions(res["summary"], "Rainfall")
+        if cp["is_significant"]:
+            st.warning(
+                f"**{cp['interpretation']}** Rainfall did not rise gradually — it jumped. Pettitt tells us **when**, not "
+                "**why**: it could be a real change in storm frequency (e.g. the severe storms of late 2016 and March 2020) "
+                "or a change in the observations feeding the MERRA-2 reanalysis. An independent dataset such as NASA GPM "
+                "IMERG is needed to confirm it."
+            )
+        with st.expander("How this analysis works"):
+            st.markdown(
+                """
+                - `PRECTOTCORR` is a **rate (mm/day)**; it is multiplied by the days in each month to get **totals**.
+                - Three yearly series are tested: the **calendar-year total**, the **wet-season total (Oct → Mar)** and the
+                  **number of wet months (≥ 1 mm)**.
+                - **Mann-Kendall + Hamed-Rao** test for a *gradual* trend (significant only if both agree);
+                  **Sen's slope** gives its size; the **Pettitt test** looks for a *sudden jump*.
+                - Series that are mostly zeros or ties are flagged as low reliability.
+                """
+            )
+
+    with tab_c:
+        view = st.radio("Series", ["Calendar-year total", "Wet-season total (Oct–Mar)"], horizontal=True, key="rain_series")
+        if view == "Calendar-year total":
+            fig = plot_rainfall_annual_totals(res["annual"], t_ann, res["normal_mm"], region, change_point=cp)
+        else:
+            seasons = res["seasons"]
+            base = seasons[(seasons["season_end_year"] >= 1981) & (seasons["season_end_year"] <= 2010)]
+            fig = plot_rainfall_annual_totals(
+                seasons, res["trends"]["wet_season_total"], float(base["total_mm"].mean()), region,
+                x_col="season_end_year", title_prefix="Wet-Season (Oct–Mar) Rainfall Totals",
+            )
+        st.plotly_chart(fig, use_container_width=True)
+        st.caption("Blue: above the 1981–2010 normal · tan: below · red: Sen's slope · purple dotted: level before/after a "
+                   "significant Pettitt shift. Wet seasons are labelled by the year they end.")
+        st.plotly_chart(plot_rainfall_monthly_climatology(res["climatology"], region), use_container_width=True)
+
+    with tab_s:
+        labels = {
+            "annual_total": "Calendar-year total (mm)",
+            "wet_season_total": "Wet-season total, Oct–Mar (mm)",
+            "wet_months": "Number of wet months (≥ 1 mm)",
+        }
+        rows = []
+        for key, label in labels.items():
+            t = res["trends"][key]
+            unit = "months" if key == "wet_months" else "mm"
+            rows.append({
+                "Metric": label, "Years": t["n_years"], "Mean": round(t["mean"], 2),
+                "Sen slope / decade": f"{t['sen_slope_per_decade']:+.2f} {unit}",
+                "95% CI / decade": f"[{t['sen_ci_per_decade'][0]:+.2f}, {t['sen_ci_per_decade'][1]:+.2f}]",
+                "MK Z": round(t["mk_z"], 2), "MK p": round(t["mk_p"], 4), "Hamed-Rao p": round(t["hr_p"], 4),
+                "Verdict": t["verdict"],
+                "Reliability": ("Low: " + "; ".join(t["reliability_notes"])) if t["low_reliability"] else "OK",
+            })
+        st.markdown("#### Trend tests")
+        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+        ranked = res["annual"][["year", "total_mm", "pct_of_normal"]].rename(
+            columns={"year": "Year", "total_mm": "Total (mm)", "pct_of_normal": "% of normal"}).round(1)
+        w1, w2 = st.columns(2)
+        with w1:
+            st.markdown("#### Wettest 5 years")
+            st.dataframe(ranked.nlargest(5, "Total (mm)"), use_container_width=True, hide_index=True)
+        with w2:
+            st.markdown("#### Driest 5 years")
+            st.dataframe(ranked.nsmallest(5, "Total (mm)"), use_container_width=True, hide_index=True)
+        with st.expander("Limitations"):
+            st.markdown(
+                """
+                - `PRECTOTCORR` is MERRA-2 **reanalysis** precipitation, not a rain-gauge record; reanalysis rainfall is less
+                  reliable than temperature, especially in very dry regions.
+                - Each region is a single ~50 km grid cell.
+                - "Wet month" = ≥ 1 mm monthly total; wet-month results depend on this threshold.
+                - In Aswan almost every month is dry, so trend tests have very little information.
+                """
+            )
+
+    with tab_r:
+        all_annual = {name: cached_rainfall(name)["annual"] for name in preset_frames()}
+        st.plotly_chart(plot_regional_rainfall(all_annual), use_container_width=True)
+        st.dataframe(cached_rainfall_table(), use_container_width=True, hide_index=True)
+        st.info(
+            "🌡️ vs 🌧️ Temperature shows a significant warming trend in all three regions, but rainfall shows **no "
+            "significant gradual trend** in any. Cairo and Alexandria instead show a significant **abrupt upward shift** in "
+            "the mid-2010s; Aswan shows neither. 43 years are not enough to tell whether this is lasting change, a cluster "
+            "of unusual storms, or a change in the reanalysis input data."
+        )
+
+
+# ==========================================
+# PAGE: TEMPERATURE EXTREMES
+# ==========================================
+def page_extremes() -> None:
+    region = analysis_region()
+    res = cached_extremes(region)
+    et = res["trends"]
+
+    page_header("🔥", f"Temperature Extremes — {region}",
+                "Hottest (T2M_MAX) and coldest (T2M_MIN) values reached in each month, 1981–2023.")
+    if active_location not in PRESET_FILES:
+        st.info(f"Extremes analysis uses the bundled regions; showing {region}. Pick a region in the top bar to switch.")
+
+    def sig(t: Dict[str, Any]) -> str:
+        return "significant" if t["is_significant"] else "not significant"
+
+    k1, k2, k3, k4 = st.columns(4)
+    kpi_card(k1, "Hottest of the year", f"{et['annual_hottest']['sen_per_decade']:+.2f} °C",
+             f"per decade · {sig(et['annual_hottest'])}", "red")
+    kpi_card(k2, "Coldest of the year", f"{et['annual_coldest']['sen_per_decade']:+.2f} °C",
+             f"per decade · {sig(et['annual_coldest'])}", "blue")
+    kpi_card(k3, "Unusually hot months", f"{et['hot_months']['sen_per_decade']:+.2f}",
+             f"months/yr per decade · {sig(et['hot_months'])}", "orange")
+    kpi_card(k4, "Unusually cold months", f"{et['cold_months']['sen_per_decade']:+.2f}",
+             f"months/yr per decade · {sig(et['cold_months'])}", "slate")
+
+    st.markdown('<div class="section-gap"></div>', unsafe_allow_html=True)
+    tab_o, tab_c, tab_s, tab_r = st.tabs(["📋 Overview", "📊 Charts", "🔬 Statistics", "🗺️ Regions"])
+
+    with tab_o:
+        render_four_questions(res["summary"], "Temperature Extremes")
+        with st.expander("What the five indices mean"):
+            st.markdown(
+                """
+                1. **Hottest value of the year**: the single highest monthly maximum.
+                2. **Coldest value of the year**: the single lowest monthly minimum.
+                3. **Unusually hot months**: monthly maximum above the 1981–2010 **90th percentile** *for that calendar month*.
+                4. **Unusually cold months**: monthly minimum below the 1981–2010 **10th percentile** *for that calendar month*.
+                5. **Monthly extreme range**: hottest minus coldest value in each month, averaged over the year.
+
+                A "hot July" is judged against other Julys. Under a stable 1981–2010 climate you would expect about
+                **1.2 unusually hot and 1.2 unusually cold months per year**.
+                """
+            )
+
+    with tab_c:
+        c_left, c_right = st.columns(2)
+        with c_left:
+            st.plotly_chart(plot_extreme_index(res["annual"], "annual_hottest", et["annual_hottest"],
+                                               "Hottest of Each Year", "°C", NASA_RED_HEX), use_container_width=True)
+        with c_right:
+            st.plotly_chart(plot_extreme_index(res["annual"], "annual_coldest", et["annual_coldest"],
+                                               "Coldest of Each Year", "°C", NASA_BLUE_HEX), use_container_width=True)
+        st.plotly_chart(plot_decadal_extreme_months(res["decades"]), use_container_width=True)
+        st.caption("Average number of unusually hot / cold months per year in each decade (the 1980s have 9 years, the 2020s 4).")
+        st.plotly_chart(plot_monthly_extreme_trends(res["by_month_tmax"], res["by_month_tmin"]), use_container_width=True)
+        st.caption("Each calendar month tested separately; solid bars stay significant after Benjamini-Hochberg FDR "
+                   "correction, faded bars do not.")
+
+    with tab_s:
+        rows = []
+        for key, (label, unit) in METRIC_INFO.items():
+            t = et[key]
+            lo, hi = t["ci_per_decade"]
+            cpe = t["pettitt"]
+            rows.append({
+                "Index": label, "Mean": round(t["mean"], 2),
+                "Slope / decade": f"{t['sen_per_decade']:+.2f} {unit}", "95% CI": f"[{lo:+.2f}, {hi:+.2f}]",
+                "Slope method": t["slope_method"], "MK p": f"{t['mk_p']:.2e}", "Hamed-Rao p": f"{t['hr_p']:.2e}",
+                "Trend (both tests)": t["verdict"],
+                "Abrupt shift (Pettitt)": f"Yes, from {cpe['new_regime_start']}" if cpe["is_significant"] else "No",
+            })
+        st.markdown("#### All five indices")
+        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+        st.caption("Counts are small integers with many ties, so Sen's median slope collapses to 0; their magnitude is "
+                   "given by OLS. Significance always comes from Mann-Kendall and Hamed-Rao.")
+        ann_e = res["annual"]
+        r1, r2 = st.columns(2)
+        with r1:
+            st.markdown("#### 5 hottest years")
+            st.dataframe(ann_e.nlargest(5, "annual_hottest")[["year", "annual_hottest", "hottest_month"]]
+                         .rename(columns={"year": "Year", "annual_hottest": "Hottest (°C)", "hottest_month": "Month"}).round(2),
+                         use_container_width=True, hide_index=True)
+        with r2:
+            st.markdown("#### 5 coldest years")
+            st.dataframe(ann_e.nsmallest(5, "annual_coldest")[["year", "annual_coldest", "coldest_month"]]
+                         .rename(columns={"year": "Year", "annual_coldest": "Coldest (°C)", "coldest_month": "Month"}).round(2),
+                         use_container_width=True, hide_index=True)
+        with st.expander("Limitations"):
+            st.markdown(
+                """
+                - MERRA-2 reanalysis grid-cell extremes (~50 km), not station records; local extremes can be more severe.
+                - Percentile thresholds come from 30 values per calendar month and carry sampling uncertainty.
+                - Hamed-Rao can give a much smaller p-value than Mann-Kendall when autocorrelation is negative; a trend is
+                  called significant only when **both** tests agree.
+                """
+            )
+
+    with tab_r:
+        st.dataframe(cached_extremes_table(), use_container_width=True, hide_index=True)
+        st.info(
+            "🔥 In all three regions the **hottest value of the year is rising** and **unusually hot months are becoming "
+            "more frequent**. Unusually **cold** months are becoming **rarer** in Cairo and Aswan. The single coldest value "
+            "of the year shows no significant trend anywhere."
+        )
+
+
+# ==========================================
+# TOP BAR (brand · navigation · region · data source)
+# ==========================================
+NAV_PAGES = {
+    "🏠 Home": page_home,
+    "🌡️ Temperature": page_temperature,
+    "🔥 Extremes": page_extremes,
+    "🌧️ Rainfall": page_rainfall,
+    "🗺️ Regions": page_regional,
+    "📂 Data": page_data_explorer,
+    "📚 Method": page_methodology,
+}
+
+
+def _load_preset(region: str) -> None:
+    df_loaded, meta_loaded = load_bundled_dataset(PRESET_FILES[region], region)
+    st.session_state["raw_df"] = df_loaded
+    st.session_state["metadata"] = meta_loaded
+    st.session_state["active_location"] = region
+
+
+def _on_region_change() -> None:
+    _load_preset(st.session_state.get("region_select", "Greater Cairo"))
+
+
+if "raw_df" not in st.session_state:
+    if os.path.exists(PRESET_FILES["Greater Cairo"]):
+        _load_preset("Greater Cairo")
+    else:
+        st.session_state["raw_df"] = pd.DataFrame()
+        st.session_state["metadata"] = {}
+        st.session_state["active_location"] = "None"
+
+with st.container(key="topbar"):
+    brand_col, nav_col, region_col, src_col = st.columns([1.7, 8.0, 1.55, 0.8], vertical_alignment="center")
+    with brand_col:
+        st.markdown(
+            '<div class="brand"><span class="brand-logo">🌍</span><div>'
+            '<div class="brand-name">EarthTrend</div><div class="brand-tag">NASA Space Apps 2026</div>'
+            "</div></div>",
+            unsafe_allow_html=True,
+        )
+    with nav_col:
+        page = st.radio("Navigation", list(NAV_PAGES), horizontal=True, label_visibility="collapsed", key="nav")
+    with region_col:
+        st.selectbox("Region", list(PRESET_FILES), key="region_select", on_change=_on_region_change,
+                     label_visibility="collapsed")
+    with src_col:
+        with st.popover("⚙️", help="Other data sources: upload a NASA CSV or query the live NASA POWER API",
+                        use_container_width=True):
+            st.markdown("**🛰️ Other data sources**")
+            data_source_mode = st.selectbox(
+                "Source Mode", ["Upload NASA CSV (Giovanni / POWER)", "Live NASA POWER API Query"]
+            )
+            if data_source_mode == "Upload NASA CSV (Giovanni / POWER)":
+                uploaded_file = st.file_uploader("Upload CSV File", type=["csv", "txt"],
+                                                 help="NASA Giovanni time series CSV or NASA POWER monthly table.")
+                custom_loc_label = st.text_input("Region Name", value="Uploaded Region")
+                if uploaded_file is not None and st.button("Parse Uploaded CSV", use_container_width=True):
+                    try:
+                        df_up, meta_up = auto_load_dataset(uploaded_file.getvalue().decode("utf-8"),
+                                                           default_location=custom_loc_label)
+                        st.session_state["raw_df"] = df_up
+                        st.session_state["metadata"] = meta_up
+                        st.session_state["active_location"] = custom_loc_label
+                        st.success(f"Loaded {len(df_up)} records!")
+                    except Exception as e:
+                        st.error(f"Error parsing file: {e}")
+            else:
+                st.caption("Live connection to the NASA Langley Research Center POWER API (MERRA-2)")
+                lat_in = st.number_input("Latitude", value=30.0444, format="%.4f")
+                lon_in = st.number_input("Longitude", value=31.2357, format="%.4f")
+                start_y = st.number_input("Start Year", min_value=1981, max_value=2023, value=1981)
+                end_y = st.number_input("End Year", min_value=1981, max_value=2023, value=2023)
+                loc_name_in = st.text_input("Location Name", value="Custom Coordinates")
+                if st.button("Fetch Real NASA Data", use_container_width=True):
+                    with st.spinner(f"Querying NASA POWER for ({lat_in:.2f}, {lon_in:.2f})..."):
+                        try:
+                            df_live, meta_live, raw_csv_live = fetch_nasa_power_point(
+                                latitude=lat_in, longitude=lon_in, start_year=int(start_y), end_year=int(end_y)
+                            )
+                            st.session_state["raw_df"] = df_live
+                            st.session_state["metadata"] = meta_live
+                            st.session_state["active_location"] = loc_name_in
+                            save_path = os.path.join("data", "raw", f"nasa_power_custom_{int(start_y)}_{int(end_y)}.csv")
+                            with open(save_path, "w", encoding="utf-8") as f:
+                                f.write(raw_csv_live)
+                            st.success(f"Fetched {len(df_live)} records and cached locally!")
+                        except Exception as e:
+                            st.error(f"NASA API Query Failed: {e}")
+            if st.session_state.get("active_location") not in PRESET_FILES:
+                st.button("↩ Back to bundled regions", on_click=_on_region_change, use_container_width=True)
+
+# Context strip under the navbar
+df_current: pd.DataFrame = st.session_state.get("raw_df", pd.DataFrame())
+metadata_current: Dict[str, Any] = st.session_state.get("metadata", {})
+active_location: str = st.session_state.get("active_location", "Selected Region")
+
+if not df_current.empty:
+    chips = [f"📍 {active_location}"]
+    if metadata_current.get("latitude") and metadata_current.get("longitude"):
+        chips.append(f"{metadata_current['latitude']}°N, {metadata_current['longitude']}°E")
+    if metadata_current.get("elevation_m"):
+        chips.append(f"{metadata_current['elevation_m']} m elevation")
+    if "year" in df_current.columns and not df_current["year"].dropna().empty:
+        chips.append(f"{int(df_current['year'].min())}–{int(df_current['year'].max())}")
+    chips.append(str(metadata_current.get("source", "NASA POWER · MERRA-2")))
+    st.markdown('<div class="context-strip">' + "".join(f"<span>{c}</span>" for c in chips) + "</div>",
+                unsafe_allow_html=True)
+
+# ==========================================
+# ROUTER
+# ==========================================
+if df_current.empty and page != "🏠 Home":
+    st.error("⚠️ No active dataset loaded. Pick a region in the top bar or load a dataset with ⚙️.")
+    st.stop()
+
+NAV_PAGES[page]()
+
+st.markdown(
+    '<div class="footer">EarthTrend Explorer · Team <b>Machine Without Learning</b> · NASA Space Apps Challenge 2026 · '
+    "Data: NASA POWER (MERRA-2), NASA Langley Research Center</div>",
+    unsafe_allow_html=True,
+)
