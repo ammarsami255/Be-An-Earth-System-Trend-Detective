@@ -1,0 +1,14 @@
+# EarthTrend Explorer - dark "space" theme
+[theme]
+base = "dark"
+primaryColor = "#FC3D21"
+backgroundColor = "#070D1C"
+secondaryBackgroundColor = "#0F1B33"
+textColor = "#E6EDF7"
+font = "sans serif"
+
+[server]
+headless = true
+
+[browser]
+gatherUsageStats = false

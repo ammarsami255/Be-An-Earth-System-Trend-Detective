@@ -78,95 +78,220 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-    /* Global styles */
-    .main {
-        background-color: #F8F9FA;
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    /* ---------- Global: dark "space" theme ---------- */
+    html, body, [class*="css"], .stMarkdown, .stText, p, li, label {
+        font-family: 'Inter', 'Segoe UI', sans-serif;
     }
+    .stApp {
+        background:
+            radial-gradient(1200px 600px at 85% -10%, rgba(76, 141, 255, 0.14), transparent 60%),
+            radial-gradient(900px 500px at -10% 110%, rgba(252, 61, 33, 0.08), transparent 60%),
+            #070D1C;
+    }
+    .block-container {
+        padding-top: 3.5rem;
+        max-width: 1280px;
+    }
+    h1, h2, h3, h4 {
+        font-family: 'Inter', 'Segoe UI', sans-serif !important;
+        letter-spacing: -0.01em;
+        color: #F1F5F9 !important;
+    }
+    h2 {
+        font-weight: 800 !important;
+        padding-bottom: 6px;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+    }
+    h3 {
+        font-weight: 700 !important;
+        margin-top: 1.4rem !important;
+    }
+    p, li { color: #CBD5E1; line-height: 1.65; }
+    strong, b { color: #F1F5F9; }
+    code {
+        background: rgba(76, 141, 255, 0.12) !important;
+        color: #9CC2FF !important;
+        border-radius: 4px;
+    }
+    a { color: #7CC4FF !important; }
+
+    /* ---------- Sidebar ---------- */
+    section[data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #0B1630 0%, #070D1C 100%);
+        border-right: 1px solid rgba(148, 163, 184, 0.12);
+    }
+    section[data-testid="stSidebar"] h3 {
+        color: #FFFFFF !important;
+    }
+    section[data-testid="stSidebar"] div[role="radiogroup"] label {
+        padding: 6px 10px;
+        border-radius: 8px;
+        transition: background 0.15s ease;
+        width: 100%;
+    }
+    section[data-testid="stSidebar"] div[role="radiogroup"] label:hover {
+        background: rgba(76, 141, 255, 0.12);
+    }
+    section[data-testid="stSidebar"] div[role="radiogroup"] label:has(input:checked) {
+        background: rgba(252, 61, 33, 0.14);
+        box-shadow: inset 3px 0 0 #FC3D21;
+    }
+
+    /* ---------- Header banner ---------- */
     .nasa-header {
-        background: linear-gradient(135deg, #0B3D91 0%, #031B4D 100%);
+        position: relative;
+        overflow: hidden;
+        background:
+            radial-gradient(600px 200px at 90% 0%, rgba(124, 196, 255, 0.35), transparent 70%),
+            linear-gradient(135deg, #0B3D91 0%, #06215A 55%, #031033 100%);
         color: white;
-        padding: 24px 28px;
-        border-radius: 10px;
-        margin-bottom: 24px;
-        box-shadow: 0 4px 12px rgba(11, 61, 145, 0.15);
+        padding: 28px 32px;
+        border-radius: 16px;
+        margin-bottom: 28px;
+        border: 1px solid rgba(124, 196, 255, 0.25);
+        box-shadow: 0 10px 40px rgba(11, 61, 145, 0.35);
+    }
+    .nasa-header::after {
+        /* faint "star field" */
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image:
+            radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.7), transparent),
+            radial-gradient(1px 1px at 70% 20%, rgba(255,255,255,0.6), transparent),
+            radial-gradient(1.5px 1.5px at 85% 70%, rgba(255,255,255,0.5), transparent),
+            radial-gradient(1px 1px at 40% 80%, rgba(255,255,255,0.5), transparent),
+            radial-gradient(1px 1px at 55% 50%, rgba(255,255,255,0.4), transparent);
+        pointer-events: none;
     }
     .nasa-header h1 {
         color: #FFFFFF !important;
-        font-family: 'Inter', sans-serif;
-        font-weight: 700;
+        font-weight: 800;
         margin: 0;
-        font-size: 2.1rem;
+        font-size: 2.4rem;
+        letter-spacing: -0.02em;
+        border: none !important;
     }
     .nasa-badge {
         display: inline-block;
         background-color: #FC3D21;
         color: white;
         padding: 4px 10px;
-        border-radius: 4px;
-        font-weight: 600;
-        font-size: 0.78rem;
-        letter-spacing: 0.5px;
+        border-radius: 999px;
+        font-weight: 700;
+        font-size: 0.72rem;
+        letter-spacing: 0.08em;
         text-transform: uppercase;
         margin-right: 8px;
     }
     .nasa-subbadge {
         display: inline-block;
-        background-color: rgba(255, 255, 255, 0.2);
-        color: white;
+        background-color: rgba(255, 255, 255, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        color: #E6EDF7;
         padding: 4px 10px;
-        border-radius: 4px;
-        font-size: 0.78rem;
+        border-radius: 999px;
+        font-size: 0.74rem;
         margin-right: 8px;
     }
+
+    /* ---------- Question boxes (Home / Trend pages) ---------- */
     .q-box {
-        background-color: #FFFFFF;
-        border-left: 5px solid #0B3D91;
+        background: linear-gradient(180deg, rgba(15, 27, 51, 0.95), rgba(11, 20, 40, 0.95));
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        border-left: 4px solid #4C8DFF;
         padding: 16px 20px;
-        border-radius: 0 8px 8px 0;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        border-radius: 12px;
         margin-bottom: 16px;
     }
     .q-title {
-        font-size: 1.05rem;
+        font-size: 1.02rem;
         font-weight: 700;
-        color: #0B3D91;
-        margin-bottom: 4px;
+        color: #7CC4FF;
+        margin-bottom: 6px;
     }
     .q-answer {
         font-size: 0.95rem;
-        color: #1E293B;
-        line-height: 1.5;
+        color: #CBD5E1;
+        line-height: 1.6;
     }
-    .stat-card {
-        background-color: #FFFFFF;
-        border: 1px solid #E2E8F0;
-        border-radius: 8px;
-        padding: 16px;
-        text-align: center;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+
+    /* ---------- Stat cards (custom HTML) and st.metric ---------- */
+    .stat-card, div[data-testid="stMetric"] {
+        background: linear-gradient(180deg, #11203D 0%, #0C1830 100%);
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        border-radius: 14px;
+        padding: 16px 18px;
+        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
+        transition: transform 0.15s ease, border-color 0.15s ease;
     }
-    .stat-label {
-        font-size: 0.82rem;
-        color: #64748B;
+    .stat-card { text-align: center; }
+    .stat-card:hover, div[data-testid="stMetric"]:hover {
+        transform: translateY(-2px);
+        border-color: rgba(76, 141, 255, 0.45);
+    }
+    .stat-label, div[data-testid="stMetricLabel"] p {
+        font-size: 0.76rem !important;
+        color: #94A3B8 !important;
         text-transform: uppercase;
+        letter-spacing: 0.06em;
         font-weight: 600;
         margin-bottom: 4px;
     }
     .stat-val {
         font-size: 1.6rem;
-        font-weight: 700;
-        color: #031B4D;
+        font-weight: 800;
+        color: #F1F5F9;
+    }
+    div[data-testid="stMetricValue"] {
+        font-weight: 800;
+        color: #F1F5F9;
+        font-size: clamp(1.15rem, 2.1vw, 1.75rem) !important;
+    }
+    /* never truncate metric text with "..." - wrap it instead */
+    div[data-testid="stMetricValue"] > div,
+    div[data-testid="stMetricLabel"] p,
+    div[data-testid="stMetricLabel"] div,
+    div[data-testid="stMetricDelta"] div {
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
     }
     .stat-sub {
         font-size: 0.8rem;
-        color: #475569;
+        color: #94A3B8;
         margin-top: 4px;
     }
-    .sig-green {
-        color: #10B981 !important;
+    .sig-green { color: #34D399 !important; }
+    .sig-red { color: #F87171 !important; }
+
+    /* ---------- Charts, tables, alerts ---------- */
+    div[data-testid="stPlotlyChart"] {
+        background: #0F1B33;
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        border-radius: 14px;
+        padding: 6px;
+        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
     }
-    .sig-red {
-        color: #EF4444 !important;
+    div[data-testid="stDataFrame"] {
+        border: 1px solid rgba(148, 163, 184, 0.14);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    div[data-testid="stAlert"] {
+        border-radius: 12px;
+    }
+    .stButton > button {
+        border-radius: 10px;
+        font-weight: 600;
+        border: 1px solid rgba(252, 61, 33, 0.6);
+    }
+    .stButton > button:hover {
+        border-color: #FC3D21;
+        color: #FFFFFF;
+        background: rgba(252, 61, 33, 0.18);
     }
     </style>
     """,
@@ -182,6 +307,26 @@ def load_bundled_dataset(filepath: str, location_label: str) -> Tuple[pd.DataFra
     with open(filepath, "r", encoding="utf-8") as f:
         content = f.read()
     return auto_load_dataset(content, default_location=location_label)
+
+
+def render_four_questions(summary: Dict[str, str], topic: str) -> None:
+    """Shows the 4 challenge questions as styled cards (2 x 2 grid)."""
+    import html as _html
+    st.markdown(f"### 🔍 The 4 Questions — {topic}")
+    items = [
+        ("1. What is changing?", summary["q1_what"]),
+        ("2. Where is it changing?", summary["q2_where"]),
+        ("3. How much is it changing?", summary["q3_how_much"]),
+        ("4. Is it statistically significant?", summary["q4_is_significant"]),
+    ]
+    for row in (items[:2], items[2:]):
+        cols = st.columns(2)
+        for col, (title, text) in zip(cols, row):
+            col.markdown(
+                f'<div class="q-box"><div class="q-title">{title}</div>'
+                f'<div class="q-answer">{_html.escape(text)}</div></div>',
+                unsafe_allow_html=True,
+            )
 
 
 # Initialize Session State
@@ -746,7 +891,7 @@ elif page == "🔬 Trend Analysis Engine":
             f"""
             <div class="stat-card">
                 <div class="stat-label">Mann-Kendall Trend</div>
-                <div class="stat-val" style="color: {'#10B981' if mk_result['trend'] == 'increasing' else ('#EF4444' if mk_result['trend'] == 'decreasing' else '#64748B')}">
+                <div class="stat-val" style="color: {'#34D399' if mk_result['trend'] == 'increasing' else ('#F87171' if mk_result['trend'] == 'decreasing' else '#94A3B8')}">
                     {mk_result['trend'].upper()}
                 </div>
                 <div class="stat-sub">S = {mk_result['s_statistic']:+.1f} | n = {mk_result['sample_size']}</div>
@@ -1078,12 +1223,7 @@ elif page == "🌧️ Rainfall Analysis":
         st.warning("⚠️ **Low reliability for this region**: " + "; ".join(t_ann["reliability_notes"]) + ". Treat the trend numbers with caution.")
 
     # 4 challenge questions
-    st.markdown("### 🔍 The 4 Questions — Rainfall")
-    summ = rain_res["summary"]
-    st.markdown(f"**1. What is changing?** {summ['q1_what']}")
-    st.markdown(f"**2. Where?** {summ['q2_where']}")
-    st.markdown(f"**3. How much?** {summ['q3_how_much']}")
-    st.markdown(f"**4. Is it statistically significant?** {summ['q4_is_significant']}")
+    render_four_questions(rain_res["summary"], "Rainfall")
 
     # Charts
     rain_view = st.radio("Series", ["Calendar-year total", "Wet-season total (Oct–Mar)"], horizontal=True)
@@ -1240,12 +1380,7 @@ elif page == "🔥 Temperature Extremes":
     e4.metric("Cold months", f"{et['cold_months']['sen_per_decade']:+.2f} /dec",
               "significant" if et["cold_months"]["is_significant"] else "not significant", delta_color="off")
 
-    st.markdown("### 🔍 The 4 Questions — Temperature Extremes")
-    es = ext_res["summary"]
-    st.markdown(f"**1. What is changing?** {es['q1_what']}")
-    st.markdown(f"**2. Where?** {es['q2_where']}")
-    st.markdown(f"**3. How much?** {es['q3_how_much']}")
-    st.markdown(f"**4. Is it statistically significant?** {es['q4_is_significant']}")
+    render_four_questions(ext_res["summary"], "Temperature Extremes")
 
     c_left, c_right = st.columns(2)
     with c_left:

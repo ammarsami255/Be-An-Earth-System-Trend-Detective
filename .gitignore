@@ -13,8 +13,9 @@ venv/
 .coverage
 htmlcov/
 
-# Streamlit
-.streamlit/
+# Streamlit (keep the shared theme, ignore local secrets)
+.streamlit/*
+!.streamlit/config.toml
 *.log
 
 # OS
