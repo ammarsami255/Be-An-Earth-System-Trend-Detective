@@ -329,7 +329,8 @@ st.markdown(
         margin-bottom: 10px;
     }
     .st-key-topbar div[data-testid="stHorizontalBlock"] { gap: 0.6rem; }
-    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand { display: flex; align-items: center; gap: 10px; min-height: 40px; }
+    .st-key-topbar div[data-testid="stColumn"]:nth-child(1) { min-height: 42px; }
     .brand-logo {
         font-size: 1.55rem;
         width: 40px; height: 40px;
@@ -540,6 +541,112 @@ st.markdown(
         border-radius: 12px;
         border: 1px solid rgba(148, 163, 184, 0.16);
         background: rgba(15, 27, 51, 0.6);
+    }
+
+    /* =====================================================
+       RESPONSIVE LAYOUT
+       laptop > 1180px · small laptop 960–1180 · tablet 640–960 · phone < 640
+       ===================================================== */
+    /* KPI rows: 4 → 2 → 1 cards per row */
+    .st-key-kpis div[data-testid="stHorizontalBlock"] { flex-wrap: wrap; gap: 1rem; }
+    .st-key-topbar label[data-testid="stRadioOption"] p { transition: font-size 0.15s ease; }
+
+    @media (max-width: 1180px) {
+        .brand-tag { display: none; }
+        .st-key-topbar label[data-testid="stRadioOption"] { padding: 5px 9px !important; }
+        .st-key-topbar label[data-testid="stRadioOption"] p { font-size: 0.8rem !important; }
+        .kpi-value { font-size: 1.6rem; }
+    }
+
+    @media (max-width: 1024px) {
+        .st-key-kpis div[data-testid="stColumn"] {
+            flex: 1 1 calc(50% - 0.5rem) !important;
+            min-width: calc(50% - 0.5rem) !important;
+            width: calc(50% - 0.5rem) !important;
+        }
+    }
+
+    /* tablet and below: navbar becomes two rows - [brand · region · gear] / [scrollable pills] */
+    @media (max-width: 960px) {
+        .st-key-topbar { position: relative; top: 0; padding: 10px 12px; }
+        .st-key-topbar div[data-testid="stHorizontalBlock"] {
+            flex-wrap: wrap !important;
+            row-gap: 8px;
+        }
+        .st-key-topbar div[data-testid="stColumn"] { min-width: 0 !important; }
+        .st-key-topbar div[data-testid="stColumn"]:nth-child(1) { flex: 1 1 auto !important; width: auto !important; order: 1; }
+        .st-key-topbar div[data-testid="stColumn"]:nth-child(3) { flex: 0 0 180px !important; width: 180px !important; order: 2; }
+        .st-key-topbar div[data-testid="stColumn"]:nth-child(4) { flex: 0 0 64px !important; width: 64px !important; order: 3; }
+        .st-key-topbar div[data-testid="stColumn"]:nth-child(2) { flex: 1 1 100% !important; width: 100% !important; order: 4; }
+        .st-key-topbar div[role="radiogroup"] {
+            flex-wrap: nowrap !important;
+            justify-content: flex-start !important;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 2px;
+        }
+        .st-key-topbar div[role="radiogroup"]::-webkit-scrollbar { display: none; }
+        .st-key-topbar div[role="radiogroup"] > div { flex: none; }
+        .page-title { font-size: 1.55rem; }
+        .hero { padding: 34px 28px 30px 28px; }
+    }
+
+    /* phone */
+    @media (max-width: 640px) {
+        .block-container { padding-left: 0.85rem !important; padding-right: 0.85rem !important; padding-top: 0.6rem !important; }
+        .st-key-topbar { border-radius: 14px; margin-bottom: 6px; }
+        .st-key-topbar div[data-testid="stColumn"]:nth-child(1) { flex: 1 1 100% !important; width: 100% !important; }
+        .st-key-topbar div[data-testid="stColumn"]:nth-child(3) { flex: 1 1 auto !important; width: auto !important; }
+        .st-key-topbar div[data-testid="stColumn"]:nth-child(4) { flex: 0 0 56px !important; width: 56px !important; }
+        .brand-logo { width: 34px; height: 34px; font-size: 1.25rem; border-radius: 10px; }
+        .brand-name { font-size: 1rem; }
+
+        .context-strip { gap: 6px; margin-bottom: 12px; }
+        .context-strip span { font-size: 0.7rem; padding: 2px 8px; }
+        .context-strip span:nth-child(n+3) { display: none; } /* keep region + coordinates only */
+
+        .hero { padding: 24px 18px 22px 18px; border-radius: 16px; margin-bottom: 14px; }
+        .hero-eyebrow { font-size: 0.66rem; letter-spacing: 0.1em; }
+        .hero-title { font-size: 1.95rem; }
+        .hero-lead { font-size: 0.98rem; }
+
+        .st-key-kpis div[data-testid="stHorizontalBlock"] { gap: 0.6rem; }
+        .st-key-kpis div[data-testid="stColumn"] {
+            flex: 1 1 calc(50% - 0.3rem) !important;
+            min-width: calc(50% - 0.3rem) !important;
+            width: calc(50% - 0.3rem) !important;
+        }
+        .kpi-card { min-height: 112px; padding: 14px 12px 12px 12px; border-radius: 14px; }
+        .kpi-label { font-size: 0.62rem; letter-spacing: 0.05em; margin-bottom: 6px; }
+        .kpi-value { font-size: 1.3rem; }
+        .kpi-sub { font-size: 0.7rem; margin-top: 6px; }
+
+        .page-head { gap: 12px; margin-bottom: 14px; }
+        .page-icon { width: 44px; height: 44px; font-size: 1.3rem; border-radius: 12px; }
+        .page-title { font-size: 1.25rem; }
+        .page-sub { font-size: 0.82rem; }
+
+        h2 { font-size: 1.35rem !important; }
+        h3 { font-size: 1.12rem !important; }
+        .q-box { padding: 12px 14px; }
+        .q-answer { font-size: 0.88rem; }
+        .finding { padding: 12px; font-size: 0.86rem; }
+
+        /* tabs scroll sideways instead of squashing */
+        div[data-testid="stTabs"] div[role="tablist"] { overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; }
+        div[data-testid="stTabs"] button[role="tab"] { padding: 6px 10px; flex: none; }
+        div[data-testid="stTabs"] button[role="tab"] p { font-size: 0.85rem; }
+
+        /* charts: smaller titles, no floating toolbar over the title */
+        div[data-testid="stPlotlyChart"] { padding: 2px; border-radius: 12px; }
+        .js-plotly-plot .gtitle { font-size: 13px !important; }
+        .js-plotly-plot .modebar-container { display: none !important; }
+        .js-plotly-plot .legendtext { font-size: 10px !important; }
+    }
+
+    @media (max-width: 360px) {
+        .st-key-kpis div[data-testid="stColumn"] { flex: 1 1 100% !important; min-width: 100% !important; width: 100% !important; }
     }
     </style>
     """,
@@ -1511,7 +1618,7 @@ def page_home() -> None:
         unsafe_allow_html=True,
     )
 
-    k1, k2, k3, k4 = st.columns(4)
+    k1, k2, k3, k4 = st.container(key="kpis").columns(4)
     kpi_card(k1, "Net warming", f"{net:+.2f} °C", f"since {temp['start']} · {sen_year * 10:+.2f} °C per decade", "red")
     if early > 0:
         kpi_card(k2, "Unusually hot months", f"×{late / early:.1f}",
@@ -1608,7 +1715,7 @@ def page_rainfall() -> None:
     if active_location not in PRESET_FILES:
         st.info(f"Rainfall analysis uses the bundled regions; showing {region}. Pick a region in the top bar to switch.")
 
-    k1, k2, k3, k4 = st.columns(4)
+    k1, k2, k3, k4 = st.container(key="kpis").columns(4)
     kpi_card(k1, "Mean annual rainfall", f"{t_ann['mean']:.0f} mm",
              f"{res['dry_month_fraction'] * 100:.0f}% of months are dry (< 1 mm)", "blue")
     kpi_card(k2, "Gradual trend", "YES" if t_ann["is_significant"] else "NO",
@@ -1730,7 +1837,7 @@ def page_extremes() -> None:
     def sig(t: Dict[str, Any]) -> str:
         return "significant" if t["is_significant"] else "not significant"
 
-    k1, k2, k3, k4 = st.columns(4)
+    k1, k2, k3, k4 = st.container(key="kpis").columns(4)
     kpi_card(k1, "Hottest of the year", f"{et['annual_hottest']['sen_per_decade']:+.2f} °C",
              f"per decade · {sig(et['annual_hottest'])}", "red")
     kpi_card(k2, "Coldest of the year", f"{et['annual_coldest']['sen_per_decade']:+.2f} °C",
