@@ -39,6 +39,7 @@ from src.preprocessing import (
 from src.rainfall_analysis import analyze_rainfall, compare_regional_rainfall
 from src.trend_analysis import (
     compute_autocorrelation,
+    compare_temperature_extremes,
     compute_calendar_month_breakdown,
     compute_linear_regression,
     compute_sens_slope,
@@ -56,6 +57,7 @@ from src.visualization import (
     plot_rainfall_monthly_climatology,
     plot_regional_comparison,
     plot_regional_rainfall,
+    plot_temperature_extremes_comparison,
     plot_timeseries_with_trend,
 )
 
@@ -991,6 +993,33 @@ elif page == "🗺️ Regional Comparison":
             "intervals overlap. We do not claim that one region is warming significantly faster than another without a formal "
             "multivariate interaction test."
         )
+
+        # Mean vs extreme temperatures
+        st.markdown("### 🌡️ Mean vs Hottest vs Coldest Temperature")
+        st.markdown(
+            "NASA POWER `T2M_MAX` and `T2M_MIN` are the **hottest and coldest values reached within each month** "
+            "(monthly extremes), not averages of daily highs/lows. Each is averaged over the 12 months of a year and "
+            "tested for a trend, so we can see whether the **extremes** are warming as fast as the **average**."
+        )
+        ext_df = compare_temperature_extremes(reg_dfs)
+        if not ext_df.empty:
+            st.plotly_chart(plot_temperature_extremes_comparison(ext_df), use_container_width=True)
+            ext_table = pd.DataFrame({
+                "Region": ext_df["region"],
+                "Variable": ext_df["label"] + " (" + ext_df["variable"] + ")",
+                "Average (°C)": ext_df["mean_c"].round(2),
+                "Sen slope (°C/decade)": ext_df["sen_per_decade"].map(lambda v: f"{v:+.3f}"),
+                "95% CI": [f"[{lo:+.3f}, {hi:+.3f}]" for lo, hi in zip(ext_df["ci_lower_per_decade"], ext_df["ci_upper_per_decade"])],
+                "MK p-value": ext_df["mk_p"].map(lambda v: f"{v:.2e}"),
+                "Hamed-Rao p-value": ext_df["hr_p"].map(lambda v: f"{v:.2e}"),
+                "Significant (both)?": ext_df["is_significant"].map({True: "YES", False: "NO"}),
+            })
+            st.dataframe(ext_table, use_container_width=True, hide_index=True)
+            st.info(
+                "📐 Mean, hottest and coldest temperatures are all warming significantly in every region. "
+                "Point estimates differ, but the 95% confidence intervals overlap, so we do **not** claim that the "
+                "extremes are warming faster than the mean without a formal difference test."
+            )
     else:
         st.warning("Regional datasets are not available yet.")
 

@@ -165,3 +165,21 @@ def test_pettitt_statistic_matches_hand_calculation():
     cp = pettitt_change_point_test(np.array([1, 2, 3, 10, 11, 12, 13, 14, 15, 16.0]), np.arange(10))
     assert cp["k_statistic"] == pytest.approx(25.0)  # split 5|5 -> 25 pairs all negative
     assert cp["u_series"][0] == -9.0
+
+
+def test_temperature_extremes_comparison_on_real_data():
+    from src.trend_analysis import compare_temperature_extremes
+    from src.visualization import plot_temperature_extremes_comparison
+
+    dfs = {"Greater Cairo": _load("cairo"), "Aswan": _load("aswan")}
+    comp = compare_temperature_extremes(dfs)
+    assert len(comp) == 6
+    assert set(comp["variable"]) == {"T2M", "T2M_MAX", "T2M_MIN"}
+    assert comp["is_significant"].all()
+    assert (comp["sen_per_decade"] > 0).all()
+    cairo_mean = comp[(comp.region == "Greater Cairo") & (comp.variable == "T2M")].iloc[0]
+    assert cairo_mean["sen_per_decade"] == pytest.approx(0.293, abs=0.005)  # README benchmark
+    # Extremes really are extremes
+    cairo = comp[comp.region == "Greater Cairo"].set_index("variable")
+    assert cairo.loc["T2M_MIN", "mean_c"] < cairo.loc["T2M", "mean_c"] < cairo.loc["T2M_MAX", "mean_c"]
+    assert len(plot_temperature_extremes_comparison(comp).data) == 3

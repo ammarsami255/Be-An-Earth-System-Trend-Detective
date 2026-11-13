@@ -495,3 +495,34 @@ def plot_regional_rainfall(annual_by_region: Dict[str, pd.DataFrame]) -> go.Figu
             )
         )
     return _apply_scientific_theme(fig, "Annual Rainfall Totals by Region", "Year", "Rainfall (mm/year)")
+
+
+def plot_temperature_extremes_comparison(comp_df: pd.DataFrame) -> go.Figure:
+    """Grouped bars: warming rate (°C/decade, Sen's slope with 95% CI) of mean, hottest and coldest temperature per region."""
+    colors = {"T2M": NASA_BLUE, "T2M_MAX": NASA_RED, "T2M_MIN": NASA_LIGHT_BLUE}
+    fig = go.Figure()
+    for var, sub in comp_df.groupby("variable", sort=False):
+        fig.add_trace(
+            go.Bar(
+                x=sub["region"],
+                y=sub["sen_per_decade"],
+                name=f"{sub['label'].iloc[0]} ({var})",
+                marker_color=colors.get(var, "#64748B"),
+                error_y={
+                    "type": "data",
+                    "symmetric": False,
+                    "array": sub["ci_upper_per_decade"] - sub["sen_per_decade"],
+                    "arrayminus": sub["sen_per_decade"] - sub["ci_lower_per_decade"],
+                    "color": "#334155",
+                },
+                hovertemplate="<b>%{x}</b>: %{y:+.2f} °C/decade<extra></extra>",
+            )
+        )
+    fig = _apply_scientific_theme(fig, "Warming Rate: Mean vs Hottest vs Coldest (Sen's slope, 95% CI)", "Region", "°C per decade")
+    fig.update_layout(
+        barmode="group",
+        hovermode="closest",
+        legend={"orientation": "h", "yanchor": "top", "y": -0.15, "xanchor": "left", "x": 0.0},
+        margin={"b": 90},
+    )
+    return fig

@@ -677,3 +677,56 @@ def synthesize_scientific_answers(
         "practical_significance": practical_meaning,
         "autocorrelation_limitation": acf_res["implication"],
     }
+
+
+TEMPERATURE_VARIABLES = {
+    "T2M": "Mean temperature",
+    "T2M_MAX": "Monthly hottest value",
+    "T2M_MIN": "Monthly coldest value",
+}
+
+
+def compare_temperature_extremes(
+    dfs: Dict[str, pd.DataFrame],
+    variables: Optional[Dict[str, str]] = None,
+    alpha: float = 0.05,
+) -> pd.DataFrame:
+    """
+    Compares warming rates of mean temperature (T2M) and of the monthly temperature
+    extremes (T2M_MAX = hottest value reached in each month, T2M_MIN = coldest value
+    reached in each month) for several regions.
+
+    Each variable is averaged to one value per year (complete 12-month years only),
+    then tested with Mann-Kendall + Hamed-Rao and Sen's slope (per decade, with 95% CI).
+    For T2M_MAX / T2M_MIN the yearly value is the AVERAGE OF THE 12 MONTHLY EXTREMES.
+    """
+    variables = variables or TEMPERATURE_VARIABLES
+    rows = []
+    for region, df in dfs.items():
+        for var, label in variables.items():
+            sub = df[(df["variable"] == var)].dropna(subset=["value"])
+            if sub.empty:
+                continue
+            grp = sub.groupby("year")["value"]
+            annual = grp.mean()[grp.count() == 12]
+            if len(annual) < 10:
+                continue
+            y = annual.values.astype(float)
+            x = annual.index.values.astype(float)
+            mk = mann_kendall_test(y, alpha=alpha)
+            hr = hamed_rao_modified_mann_kendall(y, alpha=alpha)
+            sen = compute_sens_slope(y, x, alpha=alpha)
+            rows.append({
+                "region": region,
+                "variable": var,
+                "label": label,
+                "n_years": len(y),
+                "mean_c": float(np.mean(y)),
+                "sen_per_decade": float(sen["slope"]) * 10.0,
+                "ci_lower_per_decade": float(sen["slope_ci_lower"]) * 10.0,
+                "ci_upper_per_decade": float(sen["slope_ci_upper"]) * 10.0,
+                "mk_p": float(mk["p_value"]),
+                "hr_p": float(hr["p_value"]),
+                "is_significant": bool(mk["is_significant"] and hr["is_significant"]),
+            })
+    return pd.DataFrame(rows)
