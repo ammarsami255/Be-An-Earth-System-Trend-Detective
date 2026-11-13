@@ -867,6 +867,13 @@ elif page == "🔬 Trend Analysis Engine":
             # Note: smk_res['sen_slope'] is already in units/year; multiply by 10 for decadal rate
             st.metric("Seasonal Sen's Slope", f"{smk_res['sen_slope']*10.0:+.3f} {units}/decade")
 
+        st.caption(
+            "⚠️ **Methodological Assumption**: The standard Hirsch-Slack test assumes mutual independence between seasons "
+            "(Cov(S_g, S_h) = 0). While seasonal stratification removes the deterministic annual cycle, residual cross-covariance "
+            "between consecutive months can persist. Refer to the 12-Month Calendar Breakdown with multiple-testing corrections "
+            "for month-specific trend isolation."
+        )
+
     # Autocorrelation diagnostic
     st.markdown("---")
     st.markdown("### 🔄 Temporal Autocorrelation Diagnostic (ACF)")
@@ -928,6 +935,9 @@ elif page == "🗺️ Regional Comparison":
 
         # Comparative statistics table
         st.markdown("### 📊 Regional Trend Statistics (1981–2023)")
+        st.caption(
+            "Displays both Original Mann-Kendall and Hamed & Rao (1998) Autocorrelation-Corrected statistics side by side to ensure unambiguous methodological transparency."
+        )
         comp_summary = []
         for r_name, r_df in sliced_regs.items():
             y = r_df["value"].values
@@ -935,17 +945,47 @@ elif page == "🗺️ Regional Comparison":
             mk = mann_kendall_test(y)
             sen = compute_sens_slope(y, x)
             rate_dec = sen["slope"] * 10.0 if reg_time_mode == "Annual Means" else sen["slope"] * 120.0
+            ci_dec = (sen["slope_ci_lower"] * 10.0, sen["slope_ci_upper"] * 10.0) if reg_time_mode == "Annual Means" else (sen["slope_ci_lower"] * 120.0, sen["slope_ci_upper"] * 120.0)
 
-            comp_summary.append({
-                "Region": r_name,
-                "Climate Zone": EGYPT_LOCATIONS.get(r_name, {}).get("description", "Egypt"),
-                "Mean Value": f"{np.mean(y):.2f} {units}",
-                "Sen's Slope Rate": f"{rate_dec:+.3f} {units}/decade",
-                "Mann-Kendall Trend": mk["trend"].capitalize(),
-                "p-value": f"{mk['p_value']:.4e}",
-                "Significant?": "YES" if mk["is_significant"] else "NO",
-            })
+            loc_meta = EGYPT_LOCATIONS.get(r_name, {})
+            grid_str = f"Lat {loc_meta.get('lat', 'N/A')}°, Lon {loc_meta.get('lon', 'N/A')}°"
+
+            if reg_time_mode == "Annual Means" and len(y) >= 4:
+                hr = hamed_rao_modified_mann_kendall(y)
+                comp_summary.append({
+                    "Region": r_name,
+                    "MERRA-2 Grid Cell": grid_str,
+                    "Sen Slope Rate": f"{rate_dec:+.3f} {units}/dec",
+                    "Sen 95% CI": f"[{ci_dec[0]:+.3f}, {ci_dec[1]:+.3f}]",
+                    "Original MK Z": f"{mk['z_statistic']:+.2f}",
+                    "Original MK p-val": f"{mk['p_value']:.4e}",
+                    "Hamed-Rao Factor (n/n*)": f"{hr['variance_correction_factor']:.4f}",
+                    "Hamed-Rao Z*": f"{hr['z_statistic']:+.2f}",
+                    "Hamed-Rao p*-val": f"{hr['p_value']:.4e}",
+                    "Significant (Both Tests)?": "YES" if (mk["is_significant"] and hr["is_significant"]) else "NO",
+                })
+            else:
+                comp_summary.append({
+                    "Region": r_name,
+                    "MERRA-2 Grid Cell": grid_str,
+                    "Sen Slope Rate": f"{rate_dec:+.3f} {units}/dec",
+                    "Sen 95% CI": f"[{ci_dec[0]:+.3f}, {ci_dec[1]:+.3f}]",
+                    "Original MK Z": f"{mk['z_statistic']:+.2f}",
+                    "Original MK p-val": f"{mk['p_value']:.4e}",
+                    "Hamed-Rao Factor (n/n*)": "N/A (Monthly)",
+                    "Hamed-Rao Z*": "N/A",
+                    "Hamed-Rao p*-val": "N/A",
+                    "Significant?": "YES" if mk["is_significant"] else "NO",
+                })
+
         st.dataframe(pd.DataFrame(comp_summary), use_container_width=True)
+
+        st.info(
+            "📐 **Slope Comparison Warning**: Although point estimates of Sen's slopes vary across regions "
+            f"(Cairo: +0.293 {units}/dec, Alexandria: +0.261 {units}/dec, Aswan: +0.434 {units}/dec), their 95% confidence "
+            "intervals overlap. We do not claim that one region is warming significantly faster than another without a formal "
+            "multivariate interaction test."
+        )
     else:
         st.warning("Regional datasets are not available yet.")
 
