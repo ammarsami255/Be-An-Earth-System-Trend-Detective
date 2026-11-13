@@ -64,7 +64,7 @@ VARIABLE_METADATA: Dict[str, Dict[str, str]] = {
     "T2M_MAX": {
         "name": "Maximum Temperature at 2 Meters",
         "units": "°C",
-        "description": "MERRA-2 monthly mean of daily maximum temperature at 2 meters",
+        "description": "MERRA-2 maximum 2-meter temperature reached within the month (absolute monthly extreme, NOT a mean of daily maxima)",
         "source": "NASA MERRA-2 via NASA POWER",
         "valid_min": -40.0,
         "valid_max": 70.0,
@@ -72,7 +72,7 @@ VARIABLE_METADATA: Dict[str, Dict[str, str]] = {
     "T2M_MIN": {
         "name": "Minimum Temperature at 2 Meters",
         "units": "°C",
-        "description": "MERRA-2 monthly mean of daily minimum temperature at 2 meters",
+        "description": "MERRA-2 minimum 2-meter temperature reached within the month (absolute monthly extreme, NOT a mean of daily minima)",
         "source": "NASA MERRA-2 via NASA POWER",
         "valid_min": -60.0,
         "valid_max": 50.0,

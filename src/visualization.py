@@ -47,6 +47,7 @@ def _apply_scientific_theme(fig: go.Figure, title: str, x_title: str, y_title: s
             "showline": True,
             "linecolor": "#CBD5E1",
             "zeroline": False,
+            "tickfont": {"color": TEXT_COLOR},
         },
         yaxis={
             "title": {"text": y_title, "font": {"size": 13, "color": TEXT_COLOR}},
@@ -54,6 +55,7 @@ def _apply_scientific_theme(fig: go.Figure, title: str, x_title: str, y_title: s
             "showline": True,
             "linecolor": "#CBD5E1",
             "zeroline": False,
+            "tickfont": {"color": TEXT_COLOR},
         },
         plot_bgcolor="#FFFFFF",
         paper_bgcolor="#FFFFFF",
@@ -63,7 +65,7 @@ def _apply_scientific_theme(fig: go.Figure, title: str, x_title: str, y_title: s
             "y": 1.02,
             "xanchor": "right",
             "x": 1.0,
-            "font": {"size": 11},
+            "font": {"size": 11, "color": TEXT_COLOR},
             "bgcolor": "rgba(255,255,255,0.8)",
         },
         margin={"l": 55, "r": 35, "t": 60, "b": 50},
@@ -369,3 +371,127 @@ def plot_decadal_shift_bars(decadal_df: pd.DataFrame) -> go.Figure:
     fig.update_layout(barmode="group")
     title = "Decadal Frequency Shift of Extreme Months"
     return _apply_scientific_theme(fig, title, "Decade", "Percentage of Months (%)")
+
+
+def plot_rainfall_annual_totals(
+    annual_df: pd.DataFrame,
+    trend: Dict[str, Any],
+    normal_mm: float,
+    location_name: str,
+    x_col: str = "year",
+    value_col: str = "total_mm",
+    title_prefix: str = "Annual Rainfall Totals",
+    change_point: Optional[Dict[str, Any]] = None,
+) -> go.Figure:
+    """
+    Bar chart of yearly rainfall totals (blue = above the 1981–2010 normal, tan = below),
+    with the 1981–2010 normal as a dashed line and Sen's slope trend line.
+    If a significant Pettitt `change_point` is given, the mean level before and after
+    the shift is drawn as a step line.
+    """
+    df = annual_df.dropna(subset=[value_col]).sort_values(by=x_col)
+    above = df[value_col] >= normal_mm
+    colors = np.where(above, NASA_LIGHT_BLUE, "#D4A373")
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Bar(
+            x=df[x_col],
+            y=df[value_col],
+            marker_color=colors,
+            name="Rainfall total",
+            hovertemplate="<b>%{x}</b>: %{y:.1f} mm<extra></extra>",
+        )
+    )
+    fig.add_hline(
+        y=normal_mm,
+        line_dash="dash",
+        line_color="#334155",
+        annotation_text=f"1981–2010 normal: {normal_mm:.1f} mm",
+        annotation_position="top left",
+    )
+    x_vals = df[x_col].astype(float).values
+    trend_y = trend["sen_intercept"] + trend["sen_slope_per_year"] * x_vals
+    fig.add_trace(
+        go.Scatter(
+            x=df[x_col],
+            y=trend_y,
+            mode="lines",
+            name=f"Sen's slope ({trend['sen_slope_per_decade']:+.2f} mm/decade)",
+            line={"color": NASA_RED, "width": 2.5},
+            hoverinfo="skip",
+        )
+    )
+    if change_point is not None and change_point.get("is_significant"):
+        cp_year = change_point["new_regime_start"]
+        first, last = float(df[x_col].min()), float(df[x_col].max())
+        fig.add_trace(
+            go.Scatter(
+                x=[first, cp_year - 0.5, cp_year - 0.5, last],
+                y=[change_point["mean_before"], change_point["mean_before"], change_point["mean_after"], change_point["mean_after"]],
+                mode="lines",
+                name=f"Pettitt shift in {cp_year} (mean before → after)",
+                line={"color": "#7B2CBF", "width": 2.5, "dash": "dot"},
+                hoverinfo="skip",
+            )
+        )
+    title = f"{title_prefix} — {location_name}"
+    fig = _apply_scientific_theme(fig, title, "Year", "Rainfall (mm)")
+    # Several long legend entries: place the legend below the plot so it does not cover the title
+    fig.update_layout(legend={"orientation": "h", "yanchor": "top", "y": -0.18, "xanchor": "left", "x": 0.0}, margin={"b": 90})
+    return fig
+
+
+def plot_rainfall_monthly_climatology(clim_df: pd.DataFrame, location_name: str) -> go.Figure:
+    """Average rainfall per calendar month (bars) and how often each month is wet (line)."""
+    fig = go.Figure()
+    fig.add_trace(
+        go.Bar(
+            x=clim_df["month_name"],
+            y=clim_df["mean_mm"],
+            marker_color=NASA_BLUE,
+            name="Mean rainfall (mm/month)",
+            hovertemplate="<b>%{x}</b>: %{y:.1f} mm<extra></extra>",
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=clim_df["month_name"],
+            y=clim_df["wet_fraction"] * 100.0,
+            mode="lines+markers",
+            name="Years with ≥ 1 mm (%)",
+            yaxis="y2",
+            line={"color": "#2A9D8F", "width": 2.0},
+            hovertemplate="<b>%{x}</b>: wet in %{y:.0f}% of years<extra></extra>",
+        )
+    )
+    fig = _apply_scientific_theme(fig, f"When Does It Rain? Monthly Rainfall Climatology — {location_name}", "Month", "Mean rainfall (mm/month)")
+    fig.update_layout(
+        yaxis2={
+            "title": {"text": "Years with rain (%)"},
+            "overlaying": "y",
+            "side": "right",
+            "range": [0, 105],
+            "showgrid": False,
+        }
+    )
+    return fig
+
+
+def plot_regional_rainfall(annual_by_region: Dict[str, pd.DataFrame]) -> go.Figure:
+    """Overlay of yearly rainfall totals for several regions."""
+    fig = go.Figure()
+    palette = ["#0B3D91", "#E63946", "#2A9D8F", "#F4A261", "#9B5DE5"]
+    for idx, (name, df) in enumerate(annual_by_region.items()):
+        fig.add_trace(
+            go.Scatter(
+                x=df["year"],
+                y=df["total_mm"],
+                mode="lines+markers",
+                name=name,
+                line={"color": palette[idx % len(palette)], "width": 2.0},
+                marker={"size": 4},
+                hovertemplate=f"<b>{name}</b> %{{x}}: %{{y:.1f}} mm<extra></extra>",
+            )
+        )
+    return _apply_scientific_theme(fig, "Annual Rainfall Totals by Region", "Year", "Rainfall (mm/year)")

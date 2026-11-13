@@ -36,6 +36,7 @@ from src.preprocessing import (
     filter_by_date_range,
     handle_missing_values,
 )
+from src.rainfall_analysis import analyze_rainfall, compare_regional_rainfall
 from src.trend_analysis import (
     compute_autocorrelation,
     compute_calendar_month_breakdown,
@@ -51,7 +52,10 @@ from src.visualization import (
     plot_autocorrelation_acf,
     plot_climatology_heatmap,
     plot_decadal_shift_bars,
+    plot_rainfall_annual_totals,
+    plot_rainfall_monthly_climatology,
     plot_regional_comparison,
+    plot_regional_rainfall,
     plot_timeseries_with_trend,
 )
 
@@ -201,6 +205,7 @@ with st.sidebar:
             "📈 Interactive Time Series",
             "🔬 Trend Analysis Engine",
             "🗺️ Regional Comparison",
+            "🌧️ Rainfall Analysis",
             "⚠️ Anomaly Detection",
             "📚 Methodology & Sources",
         ],
@@ -988,6 +993,171 @@ elif page == "🗺️ Regional Comparison":
         )
     else:
         st.warning("Regional datasets are not available yet.")
+
+
+# ==========================================
+# PAGE: RAINFALL ANALYSIS
+# ==========================================
+elif page == "🌧️ Rainfall Analysis":
+    st.markdown("## 🌧️ Rainfall Trend Analysis")
+    st.markdown(
+        """
+        Is Egypt getting **wetter or drier**? Rainfall behaves very differently from temperature:
+        it falls almost only in the cool season, many months are completely dry, and a single
+        storm can dominate a whole year. This page therefore:
+
+        - converts NASA POWER `PRECTOTCORR` from a **rate (mm/day)** into **totals (mm/month, mm/year)**,
+        - analyses the **calendar-year total**, the **wet-season total (Oct → Mar)** and the **number of wet months (≥ 1 mm)**,
+        - uses non-parametric tests (Mann-Kendall, Hamed-Rao, Sen's slope) that are robust to skewed data,
+        - calls a trend significant **only if both Mann-Kendall and Hamed-Rao agree**, and flags results whose data are mostly zeros or ties.
+        """
+    )
+
+    rain_files = {
+        "Greater Cairo": os.path.join("data", "raw", "nasa_power_cairo_1981_2023.csv"),
+        "Alexandria": os.path.join("data", "raw", "nasa_power_alexandria_1981_2023.csv"),
+        "Aswan": os.path.join("data", "raw", "nasa_power_aswan_1981_2023.csv"),
+    }
+    rain_dfs = {
+        name: load_bundled_dataset(path, name)[0]
+        for name, path in rain_files.items()
+        if os.path.exists(path)
+    }
+
+    if not rain_dfs:
+        st.warning("Regional rainfall datasets are not available.")
+        st.stop()
+
+    rain_region = st.radio("Region", list(rain_dfs.keys()), horizontal=True)
+    rain_res = analyze_rainfall(rain_dfs[rain_region], rain_region)
+    t_ann = rain_res["trends"]["annual_total"]
+
+    # Headline metrics
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Mean annual rainfall", f"{t_ann['mean']:.1f} mm")
+    c2.metric("Dry months (< 1 mm)", f"{rain_res['dry_month_fraction'] * 100:.0f}%")
+    c3.metric("Sen's slope", f"{t_ann['sen_slope_per_decade']:+.2f} mm/dec", f"{t_ann['pct_of_mean_per_decade']:+.1f}% of mean / dec", delta_color="off")
+    c4.metric("Significant trend?", "YES" if t_ann["is_significant"] else "NO", f"MK p = {t_ann['mk_p']:.3f}", delta_color="off")
+
+    if t_ann["low_reliability"]:
+        st.warning("⚠️ **Low reliability for this region**: " + "; ".join(t_ann["reliability_notes"]) + ". Treat the trend numbers with caution.")
+
+    # 4 challenge questions
+    st.markdown("### 🔍 The 4 Questions — Rainfall")
+    summ = rain_res["summary"]
+    st.markdown(f"**1. What is changing?** {summ['q1_what']}")
+    st.markdown(f"**2. Where?** {summ['q2_where']}")
+    st.markdown(f"**3. How much?** {summ['q3_how_much']}")
+    st.markdown(f"**4. Is it statistically significant?** {summ['q4_is_significant']}")
+
+    # Charts
+    rain_view = st.radio("Series", ["Calendar-year total", "Wet-season total (Oct–Mar)"], horizontal=True)
+    if rain_view == "Calendar-year total":
+        fig_rain = plot_rainfall_annual_totals(
+            rain_res["annual"], t_ann, rain_res["normal_mm"], rain_region, change_point=rain_res["change_point"]
+        )
+    else:
+        seasons = rain_res["seasons"]
+        base = seasons[(seasons["season_end_year"] >= 1981) & (seasons["season_end_year"] <= 2010)]
+        fig_rain = plot_rainfall_annual_totals(
+            seasons,
+            rain_res["trends"]["wet_season_total"],
+            float(base["total_mm"].mean()),
+            rain_region,
+            x_col="season_end_year",
+            title_prefix="Wet-Season (Oct–Mar) Rainfall Totals",
+        )
+    st.plotly_chart(fig_rain, use_container_width=True)
+    st.caption("Blue bars: above the 1981–2010 normal. Tan bars: below normal. Red line: Sen's slope trend. Purple dotted step: average level before/after a significant Pettitt shift. Wet seasons are labelled by the year they end (e.g. 2022 = Oct 2021–Mar 2022).")
+
+    # Abrupt shift (Pettitt)
+    st.markdown("### ⚡ Gradual Trend or Sudden Jump? (Pettitt Change-Point Test)")
+    st.markdown(
+        "Mann-Kendall only detects a **gradual** trend. The **Pettitt (1979)** test asks a different question: "
+        "did rainfall **jump to a new level** in a particular year?"
+    )
+    cp = rain_res["change_point"]
+    p1, p2, p3 = st.columns(3)
+    p1.metric("Abrupt shift?", "YES" if cp["is_significant"] else "NO", f"p = {cp['p_value']:.4f}", delta_color="off")
+    p2.metric("Shift starts in", str(cp["new_regime_start"]) if cp["is_significant"] else "—")
+    p3.metric(
+        "Mean before → after",
+        f"{cp['mean_before']:.0f} → {cp['mean_after']:.0f} mm",
+        f"{cp['pct_change']:+.0f}%" if cp["is_significant"] else None,
+        delta_color="off",
+    )
+    if cp["is_significant"]:
+        st.warning(
+            f"**{cp['interpretation']}** Rainfall did not rise gradually — it jumped. "
+            "Pettitt tells us **when** the shift happened, not **why**: it could be a real change in storm frequency "
+            "(e.g. the severe storms of late 2016 and March 2020) or a change in the observations feeding the MERRA-2 "
+            "reanalysis. Confirming it requires an independent dataset such as NASA GPM IMERG."
+        )
+    else:
+        st.success(cp["interpretation"])
+
+    st.plotly_chart(plot_rainfall_monthly_climatology(rain_res["climatology"], rain_region), use_container_width=True)
+
+    # Trend table for the 3 metrics
+    st.markdown("### 📊 Trend Tests for Three Rainfall Metrics")
+    metric_labels = {
+        "annual_total": "Calendar-year total (mm)",
+        "wet_season_total": "Wet-season total, Oct–Mar (mm)",
+        "wet_months": "Number of wet months (≥ 1 mm)",
+    }
+    trend_rows = []
+    for key, label in metric_labels.items():
+        t = rain_res["trends"][key]
+        unit = "months" if key == "wet_months" else "mm"
+        trend_rows.append({
+            "Metric": label,
+            "Years": t["n_years"],
+            "Mean": round(t["mean"], 2),
+            f"Sen slope / decade": f"{t['sen_slope_per_decade']:+.2f} {unit}",
+            "95% CI / decade": f"[{t['sen_ci_per_decade'][0]:+.2f}, {t['sen_ci_per_decade'][1]:+.2f}]",
+            "MK Z": round(t["mk_z"], 2),
+            "MK p": round(t["mk_p"], 4),
+            "Hamed-Rao p": round(t["hr_p"], 4),
+            "Verdict": t["verdict"],
+            "Reliability": "Low: " + "; ".join(t["reliability_notes"]) if t["low_reliability"] else "OK",
+        })
+    st.dataframe(pd.DataFrame(trend_rows), use_container_width=True, hide_index=True)
+
+    # Wettest / driest years
+    st.markdown("### 🏆 Wettest and Driest Years (% of 1981–2010 normal)")
+    ranked = rain_res["annual"][["year", "total_mm", "pct_of_normal"]].rename(
+        columns={"year": "Year", "total_mm": "Total (mm)", "pct_of_normal": "% of normal"}
+    ).round(1)
+    w1, w2 = st.columns(2)
+    with w1:
+        st.markdown("**Wettest 5 years**")
+        st.dataframe(ranked.nlargest(5, "Total (mm)"), use_container_width=True, hide_index=True)
+    with w2:
+        st.markdown("**Driest 5 years**")
+        st.dataframe(ranked.nsmallest(5, "Total (mm)"), use_container_width=True, hide_index=True)
+
+    # Regional comparison
+    st.markdown("### 🗺️ Regional Rainfall Comparison")
+    all_annual = {name: analyze_rainfall(df_r, name)["annual"] for name, df_r in rain_dfs.items()}
+    st.plotly_chart(plot_regional_rainfall(all_annual), use_container_width=True)
+    st.dataframe(compare_regional_rainfall(rain_dfs), use_container_width=True, hide_index=True)
+
+    st.info(
+        "🌡️ vs 🌧️ **Key finding**: temperature in all three regions shows a statistically significant warming trend, "
+        "but rainfall shows **no statistically significant gradual trend** in any of them. Instead, Cairo and Alexandria "
+        "show a significant **abrupt upward shift** in the mid-2010s (Pettitt test), while Aswan shows neither. "
+        "Rainfall in Egypt varies so much from year to year that 43 years are not enough to tell whether this shift is a "
+        "lasting climate change, a cluster of unusual storms, or a change in the reanalysis input data."
+    )
+    st.markdown(
+        """
+        **Limitations**
+        - `PRECTOTCORR` is MERRA-2 **reanalysis** precipitation (model + observations, bias-corrected), not a rain-gauge record. Reanalysis rainfall is less reliable than reanalysis temperature, especially in very dry regions.
+        - Each region is a single ~50 km grid cell, not a city-wide or national average.
+        - A "wet month" is defined as ≥ 1 mm monthly total; results for wet-month counts depend on this threshold.
+        - In Aswan almost every month is dry, so trend tests have very little information to work with.
+        """
+    )
 
 
 # ==========================================
