@@ -82,6 +82,11 @@ The codebase is currently in a verified, reproducible state with **20 of 20 unit
 - Noted that seasonal stratification removes the deterministic annual cycle but does not eliminate month-to-month persistence.
 - Documented the three analytical levels (Omnibus Seasonal MK, separate monthly tests, and multiple-testing adjusted analysis).
 
+### 2.7 Cross-Document Scientific Consistency Audit & Discrepancy Resolution
+- **Aswan Sen's Slope Resolution**: Investigated directly from `data/raw/nasa_power_aswan_1981_2023.csv` (172 rows, 516 monthly values, 43 annual points, 0 missing/fill values). Both monthly-derived annual means ($\beta = +0.4342^\circ\text{C/dec}$, 95% CI: $[+0.3121, +0.5530]$) and NASA POWER native `ANN` column values ($\beta = +0.4385^\circ\text{C/dec}$, 95% CI: $[+0.3067, +0.5519]$) confirm $+0.434^\circ\text{C/decade}$. The conflicting value `+0.320` and `[+0.217, +0.419]` was traced to an erroneous transcription in a previous chat summary table caused by visual cross-contamination from Alexandria's lag-1 autocorrelation coefficient ($\rho_1 = -0.32029$). The correct, code-verified value across the entire repository is **$+0.434^\circ\text{C/decade}$ (95% CI: $[+0.312, +0.553]$)**.
+- **Holm-Bonferroni Significant Months Verification**: Recalculated adjusted $p$-values across all 12 calendar months. Exactly 5 months survive Holm FWER ($\alpha < 0.05$): **July, August, September, November, December**. October ($p = 0.01801$, rank 6, $p_{\text{Holm}} = 0.12607 > 0.05$) survives Benjamini-Hochberg FDR control ($p_{\text{BH}} = 0.03602 < 0.05$) along with the 5 Holm months (yielding 6 BH significant months: **July, August, September, October, November, December**), but does NOT survive Holm FWER. Corrected all documentation to eliminate any erroneous inclusion of October in the Holm list.
+- **Master Reproducible Audit Script**: Implemented [`scripts/reproducible_scientific_audit.py`](file:///D:/Space-Apps/scripts/reproducible_scientific_audit.py), which reads authentic raw datasets and dynamically asserts regional statistics, Hamed-Rao continuity correction identity ($Z^* = (S - \text{sign}(S))/\sqrt{\text{Var}^*(S)}$), and multiple testing sets.
+
 ---
 
 ## 3. Files Created and Modified
@@ -110,6 +115,7 @@ The codebase is currently in a verified, reproducible state with **20 of 20 unit
   - Implemented headless Streamlit `AppTest` suite testing default execution and navigation across all 7 pages.
 
 ### Audit & Utility Scripts Created
+- [`scripts/reproducible_scientific_audit.py`](file:///D:/Space-Apps/scripts/reproducible_scientific_audit.py): Master reproducible audit script calculating regional statistics, Hamed-Rao continuity correction, and Holm/BH adjustments directly from raw CSVs.
 - [`scripts/audit_raw_datasets.py`](file:///D:/Space-Apps/scripts/audit_raw_datasets.py): Verifies shapes, metadata lines, date coverage, and missing records.
 - [`scripts/verify_cumulative_warming.py`](file:///D:/Space-Apps/scripts/verify_cumulative_warming.py): Computes and prints the 5 cumulative warming metrics.
 - [`scripts/verify_multiple_testing.py`](file:///D:/Space-Apps/scripts/verify_multiple_testing.py): Runs Holm and BH adjustments on Cairo monthly series.

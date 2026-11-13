@@ -158,7 +158,17 @@ flowchart TD
 Refer to [`MATHEMATICAL_AND_TECHNICAL_DECISIONS.md`](file:///D:/Space-Apps/MATHEMATICAL_AND_TECHNICAL_DECISIONS.md) and [`FINAL_METHODOLOGY_REVIEW.md`](file:///D:/Space-Apps/FINAL_METHODOLOGY_REVIEW.md) for full mathematical derivations. Core principles:
 - **Distribution-Free Non-Parametric Testing**: We prioritize Mann-Kendall and Theil-Sen over standard OLS because climate series violate OLS normality and homoscedasticity assumptions.
 - **Autocorrelation Robustness**: Positive serial persistence causes standard MK to over-reject $H_0$. Hamed & Rao (1998) corrects this by adjusting $\text{Var}(S)$ based on detrended rank autocorrelations.
-- **Multiple Testing Control**: Evaluating 12 individual calendar months without correction produces an unacceptably high family-wise false alarm rate ($\approx 46\%$). Benjamini-Hochberg FDR control ($q < 0.05$) rigorously establishes that warming is statistically significant across a continuous 6-month late-summer to early-winter block (July–December).
+- **Multiple Testing Control**: Evaluating 12 individual calendar months without correction produces an unacceptably high family-wise false alarm rate ($\approx 46\%$). Under Benjamini-Hochberg FDR control ($q < 0.05$), exactly 6 months survive (JUL, AUG, SEP, OCT, NOV, DEC). Under conservative Holm-Bonferroni FWER control ($\alpha < 0.05$), exactly 5 months survive (JUL, AUG, SEP, NOV, DEC; OCT has $p_{\text{Holm}} = 0.12607$). FEB and MAY are nominally significant only ($p < 0.05$), while JAN, MAR, APR, and JUN show no detectable monotonic trend.
+
+### Verified Regional Benchmark Statistics (1981–2023)
+
+All three locations represent single authentic NASA MERRA-2 grid cells ($0.5^\circ \times 0.625^\circ$), verified in `scripts/reproducible_scientific_audit.py`:
+
+| Location | Coordinates | Climate Regime | Sen Slope (°C/dec) | Sen 95% CI (°C/dec) | Theil-Sen Net (42 yrs) | MK Z | MK p-value | Hamed-Rao Factor | Corrected Z* | Corrected p* | Significant? |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Greater Cairo** | $30.04^\circ\text{N}, 31.24^\circ\text{E}$ | Urban / Nile Valley | **+0.293** | $[+0.202, +0.389]$ | **+1.23 °C** | +5.35 | $8.89 \times 10^{-8}$ | 1.000000 | **+5.35** | **$8.89 \times 10^{-8}$** | **YES** |
+| **Alexandria** | $31.20^\circ\text{N}, 29.92^\circ\text{E}$ | Mediterranean Marine | **+0.261** | $[+0.186, +0.344]$ | **+1.10 °C** | +5.50 | $3.70 \times 10^{-8}$ | 0.780520 | **+6.23** | **$4.64 \times 10^{-10}$** | **YES** |
+| **Aswan** | $24.09^\circ\text{N}, 32.90^\circ\text{E}$ | Hyper-Arid Desert | **+0.434** | $[+0.312, +0.553]$ | **+1.82 °C** | +5.76 | $8.61 \times 10^{-9}$ | 1.000000 | **+5.76** | **$8.61 \times 10^{-9}$** | **YES** |
 
 ---
 
@@ -170,7 +180,7 @@ Refer to [`MATHEMATICAL_AND_TECHNICAL_DECISIONS.md`](file:///D:/Space-Apps/MATHE
 | **Standard Mann-Kendall Engine** | Completed & Verified | Tested against synthetic series and real Cairo data |
 | **Theil-Sen Slope with Gilbert 95% CI** | Completed & Verified | Verified analytical CI bounds $[+0.202, +0.389]^\circ\text{C/dec}$ |
 | **Hamed-Rao Modified Mann-Kendall** | Completed & Verified | Verified against `pymannkendall` down to $10^{-9}$ on AR(1) |
-| **Multiple Testing (Holm & BH)** | Completed & Verified | 8 nominal, 6 BH FDR, 5 Holm FWER verified |
+| **Multiple Testing (Holm & BH)** | Completed & Verified | 8 nominal (Feb, May, Jul-Dec), 6 BH FDR (Jul-Dec), 5 Holm FWER (Jul, Aug, Sep, Nov, Dec) verified |
 | **Hirsch-Slack Seasonal Mann-Kendall** | Completed & Qualified | Unit scaled to units/year; inter-season covariance documented |
 | **Climatological Anomaly Detection** | Completed & Verified | WMO 1981–2010 normal baseline tested |
 | **Streamlit 7-Page Multi-View UI** | Completed & Verified | Headless `AppTest` passed; HTTP 200 on port 8501 |

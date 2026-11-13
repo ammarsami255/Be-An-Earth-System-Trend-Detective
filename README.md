@@ -64,8 +64,23 @@ We investigated continuous 43-year monthly 2-meter air temperature data (`T2M`) 
 | **OLS Linear Rate** | $+0.0305^\circ\text{C / year}$ ($R^2 = 0.503$) | Strong linear agreement with robust median slope ($p = 9.99 \times 10^{-8}$) |
 | **Net Cumulative Shift** | **$+1.23^\circ\text{C}$** | Net warming over 42 elapsed years ($+1.26^\circ\text{C}$ over 43 steps) |
 | **Seasonal MK ($n=516$)** | $Z = +8.05$, $p < 10^{-15}$ | Multi-decadal upward trajectory ($S = +2665$, Sen's slope $+0.303^\circ\text{C/decade}$) |
-| **Monthly Breakdown** | 6 of 12 months significant (FDR) | Under Benjamini-Hochberg FDR control ($q < 0.05$), 6 months (Jul–Dec) are significant; Feb & May are nominally significant only ($p < 0.05$); Jan, Mar, Apr, Jun show no detectable trend |
+| **Monthly Breakdown** | 5 (Holm FWER) / 6 (BH FDR) of 12 | 8 nominally significant ($p < 0.05$: Feb, May, Jul, Aug, Sep, Oct, Nov, Dec); 6 survive Benjamini-Hochberg FDR ($q < 0.05$: Jul, Aug, Sep, Oct, Nov, Dec); 5 survive Holm FWER ($\alpha < 0.05$: Jul, Aug, Sep, Nov, Dec); Jan, Mar, Apr, Jun show no detectable trend |
 | **Hamed-Rao Modified MK** | $Z^* = +5.35$, $p = 8.89 \times 10^{-8}$ | Detrended rank autocorrelations fall within 95% critical bound ($\pm 0.299$); correction factor $n/n^* = 1.000$ (insufficient evidence to detect red noise at $n=43$) |
+
+---
+
+### 2.1 Regional Comparison Across Egypt (1981–2023)
+
+All three locations represent single, authentic NASA MERRA-2 grid cells ($0.5^\circ \times 0.625^\circ$). To ensure complete methodological transparency, both Original Mann-Kendall and Hamed & Rao (1998) Autocorrelation-Corrected statistics are presented side by side:
+
+| Region | Coordinates | Climate Regime | Sen Slope (°C/dec) | Sen 95% CI (°C/dec) | Theil-Sen Net (42 yrs) | MK Z | MK p-value | Hamed-Rao Factor | Corrected Z* | Corrected p* | Significant? |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Greater Cairo** | $30.04^\circ\text{N}, 31.24^\circ\text{E}$ | Urban / Nile Valley | **+0.293** | $[+0.202, +0.389]$ | **+1.23 °C** | +5.35 | $8.89 \times 10^{-8}$ | 1.000000 | **+5.35** | **$8.89 \times 10^{-8}$** | **YES** |
+| **Alexandria** | $31.20^\circ\text{N}, 29.92^\circ\text{E}$ | Mediterranean Marine | **+0.261** | $[+0.186, +0.344]$ | **+1.10 °C** | +5.50 | $3.70 \times 10^{-8}$ | 0.780520 | **+6.23** | **$4.64 \times 10^{-10}$** | **YES** |
+| **Aswan** | $24.09^\circ\text{N}, 32.90^\circ\text{E}$ | Hyper-Arid Desert | **+0.434** | $[+0.312, +0.553]$ | **+1.82 °C** | +5.76 | $8.61 \times 10^{-9}$ | 1.000000 | **+5.76** | **$8.61 \times 10^{-9}$** | **YES** |
+
+> [!NOTE]
+> In Alexandria, a significant negative rank autocorrelation at lag 1 ($\rho_1 = -0.32029$) reduces variance, increasing $Z^*$ from $+5.50$ to $+6.23$. In Aswan and Cairo, detrended serial autocorrelations fall within the 95% critical bound ($\pm 0.2989$), leaving the correction factor at $1.000000$. While Aswan's point estimate ($+0.434^\circ\text{C/dec}$) is higher than Cairo's ($+0.293^\circ\text{C/dec}$), their 95% confidence intervals overlap; formal claims of differential regional warming rates require a multivariate slope interaction model.
 
 ---
 
