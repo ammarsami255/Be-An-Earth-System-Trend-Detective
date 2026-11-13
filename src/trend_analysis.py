@@ -180,10 +180,12 @@ def hamed_rao_modified_mann_kendall(
 
     if len(sig_lags) == 0:
         diag_explanation = (
-            f"All {n-1} detrended rank autocorrelations fall within the Bartlett 95% white noise bound "
+            f"All {n-1} detrended rank autocorrelations fall within the two-tailed 95% critical threshold "
             f"[±{crit_bound:.4f}]. Thus sni = 0.0 and the variance correction factor n/n* = 1.000000. "
-            f"The equality Var*(S) == Var(S) = {original_var_s:.2f} is mathematically expected and proves "
-            "the trend is not an artifact of serial correlation."
+            f"The equality Var*(S) == Var(S) = {original_var_s:.2f} indicates that rank serial correlation "
+            f"does not reach statistical significance at alpha={alpha}. Note that with n={n}, statistical "
+            f"power to detect subtle autocorrelation is limited; failure to reject the null hypothesis of "
+            "zero autocorrelation is not proof of absolute independence."
         )
     else:
         diag_explanation = (
@@ -202,7 +204,7 @@ def hamed_rao_modified_mann_kendall(
         "original_var_s": original_var_s,
         "corrected_var_s": corrected_var_s,
         "var_s": corrected_var_s,
-        "variance_correction_factor": round(corr_factor, 6),
+        "variance_correction_factor": float(corr_factor),
         "significant_lags_count": len(sig_lags),
         "significant_lags": sig_lags,
         "critical_bound": crit_bound,

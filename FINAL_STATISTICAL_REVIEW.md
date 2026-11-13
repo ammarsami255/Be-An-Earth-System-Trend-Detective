@@ -14,12 +14,12 @@ This independent scientific audit was conducted to resolve critical statistical 
 
 ### Key Audit Findings
 1. **Raw CSV Matrix vs. Tidy Observation Structure**: Verified that the raw CSV shape of `(172, 15)` corresponds to 4 atmospheric parameters across 43 years ($4 \times 43 = 172$). Each row contains 12 monthly observation columns plus an annual summary ($43 \times 12 = 516$ monthly observations per variable, yielding 2,064 tidy observation records). All 516 monthly timestamps exist with zero missing or fill values.
-2. **Hamed & Rao (1998) Modified Mann-Kendall**: Resolved why $\text{Var}^*(S) = \text{Var}(S) = 9129.3333$. Once the $+0.02927^\circ\text{C/year}$ Theil-Sen trend is subtracted, **all 42 detrended rank autocorrelation lags** fall strictly inside the two-tailed 95% critical white-noise bound $[\pm 0.29889]$. Under Hamed & Rao (1998), insignificant lags do not enter the correction sum ($\text{sni} = 0$), yielding an exact variance correction factor $\frac{n}{n^*} = 1.000000$. This equality is **mathematically expected** and proves the observed warming trend is genuine physical signal, not red noise.
+2. **Hamed & Rao (1998) Modified Mann-Kendall**: Resolved why $\text{Var}^*(S) = \text{Var}(S) = 9129.3333$. Once the $+0.02927^\circ\text{C/year}$ Theil-Sen trend is subtracted, **all 42 detrended rank autocorrelation lags** fall strictly inside the two-tailed 95% critical threshold $[\pm 0.29889]$. Under Hamed & Rao (1998), insignificant lags do not enter the correction sum ($\text{sni} = 0$), yielding an exact variance correction factor $\frac{n}{n^*} = 1.000000$. This equality is **mathematically expected** under the Hamed-Rao rule. However, failure to detect autocorrelation does not prove mathematical independence or that residuals are "pure white noise", as the sample size ($n = 43$) has limited statistical power to detect weak autocorrelation ($|\rho| < 0.299$).
 3. **Multiple Testing Corrections Across 12 Calendar Months**: Rigorous testing across individual calendar months reveals that nominal significance ($p < 0.05$) in 8 months does not hold uniformly after Family-Wise Error Rate (FWER) and False Discovery Rate (FDR) control:
    - **Nominal (Unadjusted)**: 8 of 12 months significant (FEB, MAY, JUL, AUG, SEP, OCT, NOV, DEC).
    - **Benjamini-Hochberg (FDR $q = 0.05$)**: **6 of 12 months** significant (JUL, AUG, SEP, OCT, NOV, DEC).
    - **Holm-Bonferroni (FWER $\alpha = 0.05$)**: **5 of 12 months** significant (JUL, AUG, SEP, NOV, DEC).
-   - **Winter/Spring Baseline**: JAN, MAR, APR, and JUN exhibit no statistically significant monotonic trend.
+   - **Winter/Spring Period**: JAN, MAR, APR, and JUN exhibit no statistically significant monotonic trend at $\alpha = 0.05$ (absence of trend detection is not evidence of thermal stability; higher natural variance reduces test power).
 4. **Cumulative Warming Discrepancies Quantified**:
    - Primary Robust Theil-Sen Estimate over 42 elapsed years ($1981\to 2023$): $\mathbf{+1.23^\circ\text{C}}$ ($+1.2292^\circ\text{C}$).
    - Raw Endpoint Difference ($T_{2023} - T_{1981}$): $\mathbf{+1.63^\circ\text{C}}$ ($+1.6333^\circ\text{C}$, sensitive to single-year weather anomalies).
@@ -145,10 +145,11 @@ For the Cairo annual mean temperature series ($n = 43$, $1981\text{–}2023$):
 
 ### 2.3 Scientific Implication
 
-The equality $\text{Var}^*(S) == \text{Var}(S)$ is **not** a programming bug or an omission. It is a rigorous mathematical confirmation that:
-- Cairo's annual temperature residuals after removing the Theil-Sen trend behave as **pure white noise**.
-- The raw annual series exhibits positive lag-1 autocorrelation ($r_1 = +0.334$) purely because of the underlying deterministic multi-decadal warming trend.
-- The trend is **not** an artifact of temporal persistence, and the standard Mann-Kendall $p$-value ($p = 8.89 \times 10^{-8}$, $Z = +5.35$) is fully valid without variance penalty.
+The equality $\text{Var}^*(S) == \text{Var}(S)$ is **not** a programming bug or an omission. It reflects the mathematical property of the Hamed & Rao (1998) procedure that:
+- Detrended annual rank serial autocorrelations for Cairo fall within the two-tailed 95% critical threshold ($|\rho_k| \le 0.2989$), meaning there is insufficient statistical evidence in this 43-year sample to reject the null hypothesis of zero autocorrelation.
+- However, failure to reject independence does **not** constitute mathematical proof that the residuals are "pure white noise" or "proven independent." With $n = 43$, the statistical power to detect subtle autocorrelation ($|\rho| < 0.299$) is limited.
+- The raw annual series exhibits positive lag-1 autocorrelation ($r_1 = +0.334$) largely because of the underlying deterministic multi-decadal warming trend; once detrended, residual autocorrelation drops to $-0.248$.
+- Under Hamed & Rao (1998), no variance penalty is applied, and the standard Mann-Kendall test statistic ($Z = +5.35$, $p = 8.89 \times 10^{-8}$) remains unadjusted.
 
 ### 2.4 Controlled Verification with Synthetic Autocorrelated Series
 
@@ -201,10 +202,11 @@ To guard against false discoveries, we implemented and compared:
 3. **Holm-Bonferroni FWER Control (5 of 12 months)**:
    - Under conservative FWER control, OCT ($p_{\text{Holm}} = 0.12607$) also loses significance.
    - **Exactly 5 months survive FWER control**: **JUL, AUG, SEP, NOV, DEC**.
-4. **Stable / Non-Significant Months (4 months)**:
-   - January, March, April, and June show no statistically significant trend under any metric.
+4. **Months Without Statistically Detectable Monotonic Trends (4 months)**:
+   - January, March, April, and June show no statistically significant trend under any metric at $\alpha = 0.05$.
    - April exhibits a near-zero slope ($-0.042^\circ\text{C/decade}$, $p = 0.867$).
-5. **Scientific Takeaway**: It is scientifically inaccurate to claim that "warming is present in all 12 individual months." Even claiming 8 months confuses nominal significance with multiple-testing corrected significance. The rigorous finding is that **Cairo's multi-decadal warming is driven by a pronounced 6-month late-summer, autumn, and early-winter heating pattern (July–December)**.
+   - Note: Failure to detect a statistically significant trend must not be equated with evidence of thermal stability; higher natural interannual variance in winter/spring reduces test power.
+5. **Scientific Takeaway**: It is scientifically inaccurate to claim that "warming is present in all 12 individual months." Even claiming 8 months confuses nominal significance with multiple-testing corrected significance. The rigorous finding is that **statistically detectable monotonic warming is concentrated in a continuous 6-month late-summer, autumn, and early-winter heating pattern (July–December)** under False Discovery Rate control. We cannot assert that warming is strictly absent in spring, as FEB ($p = 0.038$) and MAY ($p = 0.047$) reach nominal significance prior to FDR adjustment.
 
 ---
 
@@ -249,16 +251,17 @@ QUESTION 2: WHERE IS IT CHANGING?
 ========================================================================================
 - Target Geographic Grid Cell: Greater Cairo, Egypt (Lat 30.044°N, Lon 31.236°E, Elev 135.4 m).
 - Spatial Frame: MERRA-2 native atmospheric assimilation grid box (0.5° × 0.625°).
-- Cross-Regional Context Across Egypt:
-  * Upper Egypt (Aswan, Lat 24.09°N, hyper-arid desert): +0.323 °C/decade (+1.36 °C over 42 yrs).
+- Cross-Regional Context Across Egypt (3 Individual MERRA-2 Grid Cells):
+  * Upper Egypt (Aswan, Lat 24.09°N, hyper-arid desert): +0.434 °C/decade (+1.82 °C over 42 yrs).
   * Greater Cairo (Metropolitan / Nile Delta transition): +0.293 °C/decade (+1.23 °C over 42 yrs).
-  * Mediterranean Coast (Alexandria, Lat 31.20°N, marine maritime): +0.222 °C/decade (+0.93 °C over 42 yrs).
+  * Mediterranean Coast (Alexandria, Lat 31.20°N, marine maritime): +0.261 °C/decade (+1.10 °C over 42 yrs).
+  *(Note: These 3 localized grid cells illustrate climatic contrasts; they do not represent a spatially averaged national composite for all of Egypt.)*
 
 ========================================================================================
 QUESTION 3: HOW MUCH IS IT CHANGING?
 ========================================================================================
 - Non-Parametric Sen's Slope: +0.0293 °C/year (+0.293 °C/decade).
-- Analytical 95% Confidence Interval: [+0.201 °C/decade, +0.384 °C/decade].
+- Analytical 95% Confidence Interval: [+0.202 °C/decade, +0.389 °C/decade].
 - Cumulative Net Warming (42 Elapsed Years, 1981–2023): +1.23 °C.
 - Parametric OLS Rate: +0.0305 °C/year (+0.305 °C/decade, R² = 0.5034, Cumulative: +1.28 °C).
 - Climatological Decadal Baseline Shift (1981–1990 vs. 2014–2023): +0.95 °C.
@@ -303,10 +306,10 @@ QUESTION 4: IS THE OBSERVED TREND STATISTICALLY SIGNIFICANT?
    - State the primary cumulative warming as **$+1.23^\circ\text{C}$ over 42 elapsed years** (Theil-Sen).
    - Show the comparison table explaining why raw endpoint subtraction yields $+1.63^\circ\text{C}$ and OLS yields $+1.28^\circ\text{C}$. This demonstrates advanced statistical maturity.
 3. **Highlight the Seasonal 6-Month Block Discovered via FDR Control**:
-   - Present the 12-month calendar breakdown as a marquee scientific insight:
-   - *"Warming is not uniform across the year. Using Benjamini-Hochberg False Discovery Rate control across 12 simultaneous hypotheses, we prove that warming in Greater Cairo is concentrated in a continuous 6-month block from July through December (late summer to early winter), while spring months remain stable."*
-4. **Showcase the Hamed-Rao Proof as Robustness Verification**:
-   - Highlight that the detrended rank autocorrelation test proved $\frac{n}{n^*} = 1.000000$ because residuals are pure white noise, validating that the $+0.293^\circ\text{C/decade}$ trend is not an autocorrelation artifact.
+   - Present the 12-month calendar breakdown as a nuanced scientific insight:
+   - *"Warming is not uniform across the year. Using Benjamini-Hochberg False Discovery Rate control across 12 simultaneous hypotheses, statistically significant monotonic warming is detected in a continuous 6-month block from July through December (late summer to early winter). In contrast, winter and spring months do not show statistically significant monotonic trends at alpha = 0.05, likely reflecting lower signal-to-noise ratios and higher interannual variability rather than absolute thermal stability."*
+4. **Showcase the Hamed-Rao Robustness Verification**:
+   - Explain that detrended rank autocorrelations fall within the 95% critical detection threshold ($\pm 0.2989$), resulting in $\frac{n}{n^*} = 1.000000$. Note that while this demonstrates the $+0.293^\circ\text{C/decade}$ trend is not an obvious artifact of strong red noise, statistical power to detect weak autocorrelation is constrained by the 43-year sample size.
 5. **Demonstrate the Live Interactive Streamlit App**:
    - Walk judges through the 7 modular sections of `EarthTrend Explorer`.
    - Point out that every statistical metric shown in the UI is dynamically computed live from real NASA data with full interactive error bounds.

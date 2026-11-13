@@ -822,9 +822,9 @@ elif page == "🔬 Trend Analysis Engine":
             f"**Multiple Testing Synthesis Across 12 Calendar Months**:\n\n"
             f"- **Nominal Unadjusted ($p < {alpha_val}$)**: **{len(nominal_sig)} of 12 months** ({', '.join(nominal_sig)}).\n"
             f"- **Benjamini-Hochberg FDR ($q < {alpha_val}$)**: **{len(bh_sig)} of 12 months** ({', '.join(bh_sig)}). "
-            f"Warming is statistically confirmed across the continuous 6-month late-summer to early-winter period; FEB and MAY do not survive false discovery rate control.\n"
+            f"Statistically detectable monotonic warming is concentrated in the continuous 6-month late-summer to early-winter period (JUL–DEC); FEB and MAY do not survive false discovery rate control.\n"
             f"- **Holm-Bonferroni FWER ($\alpha < {alpha_val}$)**: **{len(holm_sig)} of 12 months** ({', '.join(holm_sig)}).\n"
-            f"- **Stable Months**: JAN, MAR, APR, and JUN show no statistically significant trend under any criterion."
+            f"- **Months Without Statistically Detectable Monotonic Trends**: In this 43-year observational record, JAN, MAR, APR, and JUN do not show statistically significant monotonic trends at α = {alpha_val}. Note: Absence of statistically significant trend detection is not evidence of thermal stability; higher natural interannual variability in winter/spring reduces test power."
         )
 
         st.dataframe(
@@ -889,7 +889,7 @@ elif page == "🗺️ Regional Comparison":
         - **Alexandria**: Mediterranean coastal marine zone (Grid Cell 31.20°N, 29.92°E)
         - **Aswan**: Upper Egypt hyper-arid desert climate (Grid Cell 24.09°N, 32.90°E)
         
-        *Note: Comparisons evaluate the three individual MERRA-2 0.5° × 0.625° grid cells, not whole administrative governorate spatial averages.*
+        *Note: Comparisons evaluate three individual, point-extracted MERRA-2 0.5° × 0.625° model grid cells representing localized climatic sample points. They do not represent a spatially complete national average or imply that three grid cells represent all of Egypt.*
         """
     )
 

@@ -7,6 +7,7 @@ import math
 import numpy as np
 import pandas as pd
 import pytest
+from scipy import stats
 
 from src.trend_analysis import (
     compute_autocorrelation,
@@ -188,8 +189,10 @@ def test_calendar_month_breakdown():
 
 
 def test_hamed_rao_modified_mann_kendall():
-    """Verify Hamed & Rao modified Mann-Kendall handles white noise and autocorrelated series."""
-    # Case 1: Pure white noise around linear trend (variance correction factor = 1.0)
+    """Verify Hamed & Rao modified Mann-Kendall numerical correctness on both independent and autocorrelated series."""
+    import pymannkendall as pmk
+
+    # Case 1: Series without significant autocorrelation around linear trend (variance correction factor = 1.0)
     np.random.seed(42)
     x = np.arange(43)
     y_wn = 0.1 * x + np.random.normal(0, 0.2, size=43)
@@ -203,6 +206,7 @@ def test_hamed_rao_modified_mann_kendall():
     assert res_wn["significant_lags_count"] == 0
 
     # Case 2: Highly autocorrelated AR(1) series (variance correction factor > 1.0)
+    # Verifies the exact numerical correctness of Hamed & Rao (1998) Eq. 11 formula
     np.random.seed(123)
     n = 100
     e = np.random.normal(0, 1, n)
@@ -212,7 +216,31 @@ def test_hamed_rao_modified_mann_kendall():
     y_ar = 0.05 * np.arange(n) + ar
 
     res_ar = hamed_rao_modified_mann_kendall(y_ar, alpha=0.05)
+    pmk_res = pmk.hamed_rao_modification_test(y_ar, alpha=0.05)
+
     assert res_ar["significant_lags_count"] > 0
     assert res_ar["variance_correction_factor"] > 1.0
     assert res_ar["corrected_var_s"] > res_ar["original_var_s"]
     assert "significant detrended rank autocorrelation lags" in res_ar["explanation"]
+
+    # Explicit numerical verification against pymannkendall reference and analytical formula
+    assert math.isclose(res_ar["corrected_var_s"], pmk_res.var_s, rel_tol=1e-9)
+    assert math.isclose(res_ar["z_statistic"], pmk_res.z, rel_tol=1e-9)
+    assert math.isclose(res_ar["p_value"], pmk_res.p, rel_tol=1e-9)
+
+    # Verify manual formula calculation
+    ranks = stats.rankdata(y_ar - np.arange(1, n + 1) * res_ar["sen_slope"])
+    mean_r = np.mean(ranks)
+    var_r = np.var(ranks)
+    crit = stats.norm.ppf(0.975) / math.sqrt(n)
+    expected_sni = 0.0
+    for i in range(1, n):
+        c_i = float(np.sum((ranks[i:] - mean_r) * (ranks[:-i] - mean_r)) / n)
+        rho_i = c_i / var_r
+        if abs(rho_i) > crit:
+            expected_sni += (n - i) * (n - i - 1) * (n - i - 2) * rho_i
+    expected_factor = 1.0 + (2.0 / (n * (n - 1) * (n - 2))) * expected_sni
+    expected_corrected_var = res_ar["original_var_s"] * expected_factor
+
+    assert math.isclose(res_ar["variance_correction_factor"], expected_factor, rel_tol=1e-12)
+    assert math.isclose(res_ar["corrected_var_s"], expected_corrected_var, rel_tol=1e-12)

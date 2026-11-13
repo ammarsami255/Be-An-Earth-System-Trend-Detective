@@ -50,8 +50,8 @@ We investigated continuous 43-year monthly 2-meter air temperature data (`T2M`) 
 | **OLS Linear Rate** | $+0.0305^\circ\text{C / year}$ ($R^2 = 0.503$) | Strong linear agreement with robust median slope ($p = 9.99 \times 10^{-8}$) |
 | **Net Cumulative Shift** | **$+1.23^\circ\text{C}$** | Net warming over 42 elapsed years ($+1.26^\circ\text{C}$ over 43 steps) |
 | **Seasonal MK ($n=516$)** | $Z = +8.05$, $p < 10^{-15}$ | Multi-decadal upward trajectory ($S = +2665$, Sen's slope $+0.303^\circ\text{C/decade}$) |
-| **Monthly Breakdown** | 8 of 12 months significant | Significant in Feb, May, Jul–Dec (Nov fastest: $+0.504^\circ\text{C/dec}$); Jan, Mar, Apr, Jun non-sig |
-| **Hamed-Rao Modified MK** | $Z^* = +5.35$, $p = 8.89 \times 10^{-8}$ | Confirmed robust against red noise: detrended residual $r_1 = -0.248$ (within white noise bound) |
+| **Monthly Breakdown** | 6 of 12 months significant (FDR) | Under Benjamini-Hochberg FDR control ($q < 0.05$), 6 months (Jul–Dec) are significant; Feb & May are nominally significant only ($p < 0.05$); Jan, Mar, Apr, Jun show no detectable trend |
+| **Hamed-Rao Modified MK** | $Z^* = +5.35$, $p = 8.89 \times 10^{-8}$ | Detrended rank autocorrelations fall within 95% critical bound ($\pm 0.299$); correction factor $n/n^* = 1.000$ (insufficient evidence to detect red noise at $n=43$) |
 
 ---
 
