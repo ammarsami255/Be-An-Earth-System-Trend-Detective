@@ -11,7 +11,7 @@
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.42%2B-FF4B4B.svg)](https://streamlit.io/)
 [![PyMannKendall](https://img.shields.io/badge/PyMannKendall-1.4.3-green.svg)](https://github.com/mmhs013/pymannkendall)
 [![NASA Data](https://img.shields.io/badge/NASA_Earth_Science-MERRA--2-0B3D91.svg)](https://power.larc.nasa.gov/)
-[![Tests Passing](https://img.shields.io/badge/pytest-61%2F61_Passed-success.svg)](https://docs.pytest.org/)
+[![Tests Passing](https://img.shields.io/badge/pytest-71%2F71_Passed-success.svg)](https://docs.pytest.org/)
 [![Theme](https://img.shields.io/badge/Theme-Space_Dark-0F1B33.svg)](https://streamlit.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -158,7 +158,7 @@ Precipitation totals in mm/year, wet season (Oct–Mar), and Pettitt change-poin
 - **Data Engineering**: Pandas, NumPy
 - **Statistical & Forecasting Engine**: SciPy (`scipy.stats`), Statsmodels (`statsmodels.tsa`), PyMannKendall (`pymannkendall`)
 - **Interactive Visualizations**: Plotly (`plotly.graph_objects`, `plotly.express`, `plotly.subplots`) with custom dark space palette
-- **Testing & Verification**: Pytest (61 unit, integration, statistical, and headless Streamlit AppTest tests)
+- **Testing & Verification**: Pytest (71 unit, integration, statistical, and headless Streamlit AppTest tests)
 - **Version Control**: Git & GitHub
 
 ---

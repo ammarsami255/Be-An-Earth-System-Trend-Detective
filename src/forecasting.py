@@ -157,6 +157,7 @@ def forecast_exponential_smoothing(
     alpha_80: float = 0.20,
     alpha_95: float = 0.05,
     is_precipitation: bool = False,
+    random_state: Optional[int] = 2026,
 ) -> Dict[str, Any]:
     """
     Holt-Winters Additive Exponential Smoothing (state-space ETS).
@@ -190,7 +191,10 @@ def forecast_exponential_smoothing(
         try:
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                sims = fit_res.simulate(nsimulations=horizon, repetitions=n_simulations, error="add")
+                sims = fit_res.simulate(
+                    nsimulations=horizon, repetitions=n_simulations, error="add",
+                    random_state=random_state,  # fixed seed -> identical intervals on every page load
+                )
             # sims shape: (horizon, n_simulations)
             ci_80_lower = np.percentile(sims, (alpha_80 / 2.0) * 100.0, axis=1)
             ci_80_upper = np.percentile(sims, (1.0 - alpha_80 / 2.0) * 100.0, axis=1)
@@ -372,6 +376,45 @@ def compute_forecast_metrics(actual: np.ndarray, predicted: np.ndarray) -> Dict[
     return {"mae": mae, "rmse": rmse}
 
 
+def _inside(actual: np.ndarray, lower: np.ndarray, upper: np.ndarray) -> List[bool]:
+    """Element-wise test of whether each held-out observation lies inside [lower, upper]."""
+    a = np.asarray(actual, dtype=float)
+    return [bool(lo <= v <= hi) for v, lo, hi in zip(a, np.asarray(lower, float), np.asarray(upper, float))]
+
+
+def interval_coverage_verdict(observed_pct: float, nominal_pct: float, n: int) -> str:
+    """
+    Plain verdict on whether an empirical coverage rate is consistent with its nominal level.
+    Uses an exact two-sided binomial test (H0: true coverage = nominal) on n held-out months.
+    """
+    if n <= 0 or np.isnan(observed_pct):
+        return "not evaluated"
+    k = int(round(observed_pct / 100.0 * n))
+    p = float(stats.binomtest(k, n, nominal_pct / 100.0).pvalue)
+    if p >= 0.05:
+        return "well calibrated"
+    return "too narrow (over-confident)" if observed_pct < nominal_pct else "too wide (conservative)"
+
+
+def exceedance_probability(
+    point_forecast: float,
+    ci95_lower: float,
+    ci95_upper: float,
+    threshold: float,
+) -> float:
+    """
+    P(Y >= threshold) from a Gaussian predictive distribution whose standard deviation is
+    recovered from the 95 % prediction interval: sigma = (upper - lower) / (2 * 1.96).
+
+    This turns an *expected* departure into an actual *risk*: a forecast that sits exactly on
+    the +1 sigma line still only has ~50 % chance of exceeding it.
+    """
+    sd = (ci95_upper - ci95_lower) / (2.0 * float(stats.norm.ppf(0.975)))
+    if not np.isfinite(sd) or sd <= 0:
+        return float(point_forecast >= threshold)
+    return float(stats.norm.sf(threshold, loc=point_forecast, scale=sd))
+
+
 def backtest_models(
     series: Union[np.ndarray, pd.Series],
     horizon: int = 12,
@@ -410,6 +453,10 @@ def backtest_models(
     model_errors: Dict[str, Dict[str, List[float]]] = {
         m_key: {"mae": [], "rmse": []} for m_key in models_to_test
     }
+    # Empirical prediction-interval coverage: how many held-out months fell inside the 80% / 95% band
+    model_cover: Dict[str, Dict[str, List[bool]]] = {
+        m_key: {"in80": [], "in95": []} for m_key in models_to_test
+    }
 
     # Split origins: expanding training set, fixed 12-month test horizon
     for split_idx in range(n_splits):
@@ -436,6 +483,8 @@ def backtest_models(
         met_naive = compute_forecast_metrics(y_test, fc_naive["forecast"])
         model_errors["naive"]["mae"].append(met_naive["mae"])
         model_errors["naive"]["rmse"].append(met_naive["rmse"])
+        model_cover["naive"]["in80"].extend(_inside(y_test, fc_naive["ci_80_lower"], fc_naive["ci_80_upper"]))
+        model_cover["naive"]["in95"].extend(_inside(y_test, fc_naive["ci_95_lower"], fc_naive["ci_95_upper"]))
         origin_record["models"]["naive"] = {
             "forecast": fc_naive["forecast"].tolist(),
             "metrics": met_naive,
@@ -446,6 +495,8 @@ def backtest_models(
         met_ets = compute_forecast_metrics(y_test, fc_ets["forecast"])
         model_errors["ets"]["mae"].append(met_ets["mae"])
         model_errors["ets"]["rmse"].append(met_ets["rmse"])
+        model_cover["ets"]["in80"].extend(_inside(y_test, fc_ets["ci_80_lower"], fc_ets["ci_80_upper"]))
+        model_cover["ets"]["in95"].extend(_inside(y_test, fc_ets["ci_95_lower"], fc_ets["ci_95_upper"]))
         origin_record["models"]["ets"] = {
             "forecast": fc_ets["forecast"].tolist(),
             "metrics": met_ets,
@@ -456,6 +507,8 @@ def backtest_models(
         met_sarima = compute_forecast_metrics(y_test, fc_sarima["forecast"])
         model_errors["sarima"]["mae"].append(met_sarima["mae"])
         model_errors["sarima"]["rmse"].append(met_sarima["rmse"])
+        model_cover["sarima"]["in80"].extend(_inside(y_test, fc_sarima["ci_80_lower"], fc_sarima["ci_80_upper"]))
+        model_cover["sarima"]["in95"].extend(_inside(y_test, fc_sarima["ci_95_lower"], fc_sarima["ci_95_upper"]))
         origin_record["models"]["sarima"] = {
             "forecast": fc_sarima["forecast"].tolist(),
             "metrics": met_sarima,
@@ -484,6 +537,10 @@ def backtest_models(
             "mean_mae": round(avg_mae, 3),
             "mean_rmse": round(avg_rmse, 3),
             "mase": round(mase, 3),
+            # share of held-out months inside the nominal band (ideal: 80 % and 95 %)
+            "coverage_80": round(100.0 * float(np.mean(model_cover[m_key]["in80"])), 1),
+            "coverage_95": round(100.0 * float(np.mean(model_cover[m_key]["in95"])), 1),
+            "n_test_months": len(model_cover[m_key]["in95"]),
         }
 
         if avg_mae < lowest_mae:
@@ -625,6 +682,14 @@ def generate_12month_forecast(
 
         bracket_label, bracket_color = classify_future_z_score(exp_z)
 
+        # Probabilistic risk (Gaussian predictive distribution; not defined for zero-inflated rain)
+        if is_precipitation:
+            p_above, p_warm, p_cold = np.nan, np.nan, np.nan
+        else:
+            p_above = exceedance_probability(fc_val, ci95_l, ci95_u, c_mean)
+            p_warm = exceedance_probability(fc_val, ci95_l, ci95_u, c_mean + c_std)
+            p_cold = 1.0 - exceedance_probability(fc_val, ci95_l, ci95_u, c_mean - c_std)
+
         # Precipitation Percent of Normal
         pct_norm = (fc_val / c_mean * 100.0) if (is_precipitation and c_mean > 0.1) else np.nan
 
@@ -647,6 +712,9 @@ def generate_12month_forecast(
             "expected_z_ci95_upper": round(exp_z_ci95_u, 2),
             "severity_bracket": bracket_label,
             "severity_color": bracket_color,
+            "prob_above_normal": round(100.0 * p_above, 1) if not math.isnan(p_above) else np.nan,
+            "prob_z_ge_plus1": round(100.0 * p_warm, 1) if not math.isnan(p_warm) else np.nan,
+            "prob_z_le_minus1": round(100.0 * p_cold, 1) if not math.isnan(p_cold) else np.nan,
             "pct_of_normal": round(pct_norm, 1) if not math.isnan(pct_norm) else np.nan,
         })
 
@@ -695,10 +763,20 @@ def generate_12month_forecast(
         "warm_months_count": warm_count,
         "cold_months_count": cold_count,
         "near_normal_count": near_normal_count,
+        "winner_coverage_80": backtest_res["summary_metrics"][winner_key]["coverage_80"],
+        "winner_coverage_95": backtest_res["summary_metrics"][winner_key]["coverage_95"],
+        "mean_prob_above_normal": (
+            round(float(forecast_df["prob_above_normal"].mean()), 1)
+            if not is_precipitation else np.nan
+        ),
+        "months_likely_warm": (
+            int((forecast_df["prob_z_ge_plus1"] >= 50.0).sum()) if not is_precipitation else 0
+        ),
     }
 
     return {
         "variable": variable,
+        "value_col": val_col,
         "is_precipitation": is_precipitation,
         "is_hyper_arid": is_hyper_arid,
         "selected_model_name": fc_dict["model_name"],
@@ -711,4 +789,66 @@ def generate_12month_forecast(
         "residuals": fc_dict.get("residuals", np.array([])),
         "fitted_values": fc_dict.get("fitted_values", np.array([])),
         "summary_kpis": summary_kpis,
+    }
+
+
+# ==============================================================================
+# 4. TRUE OUT-OF-SAMPLE VERIFICATION AGAINST NEWLY RELEASED OBSERVATIONS
+# ==============================================================================
+
+def verify_forecast_against_observations(
+    fc_res: Dict[str, Any],
+    observed_df: pd.DataFrame,
+) -> Dict[str, Any]:
+    """
+    Scores a forecast that was produced WITHOUT the verification period against
+    observations NASA POWER released afterwards (e.g. forecast made from 1981–2023,
+    checked against real 2024 months).
+
+    Unlike the backtest, nothing here was ever available to model selection, so this is
+    the most honest skill estimate the project can report.
+
+    Parameters
+    ----------
+    fc_res : output of generate_12month_forecast.
+    observed_df : tidy frame with 'date' and 'value' for the same variable/location.
+
+    Returns
+    -------
+    dict with a month-by-month table and summary scores (MAE, bias, interval hit-rates,
+    predicted vs observed mean anomaly, and the naive 'same as last year' MAE for reference).
+    """
+    fc = fc_res["forecast_df"].copy()
+    obs = observed_df[["date", "value"]].copy()
+    obs["date"] = pd.to_datetime(obs["date"])
+    merged = fc.merge(obs.rename(columns={"value": "observed"}), on="date", how="inner")
+    if merged.empty:
+        return {"available": False, "n_months": 0, "table": merged}
+
+    err = merged["observed"] - merged["forecast"]
+    merged["error"] = err.round(2)
+    merged["in_80"] = (merged["observed"] >= merged["ci_80_lower"]) & (merged["observed"] <= merged["ci_80_upper"])
+    merged["in_95"] = (merged["observed"] >= merged["ci_95_lower"]) & (merged["observed"] <= merged["ci_95_upper"])
+    merged["observed_anomaly"] = (merged["observed"] - merged["clim_mean"]).round(2)
+
+    # Reference: what "same month last year" would have scored
+    hist = fc_res["historical_df"].sort_values("date")
+    vcol = fc_res.get("value_col", "value")
+    last_year = {d.month: float(v) for d, v in zip(pd.to_datetime(hist["date"]).tail(12), hist[vcol].tail(12))}
+    naive_pred = merged["date"].dt.month.map(last_year)
+    naive_mae = float(np.mean(np.abs(merged["observed"] - naive_pred))) if naive_pred.notna().all() else float("nan")
+
+    n = int(len(merged))
+    return {
+        "available": True,
+        "n_months": n,
+        "table": merged,
+        "mae": float(np.mean(np.abs(err))),
+        "bias": float(np.mean(err)),  # > 0: reality was warmer / wetter than forecast
+        "hit_80": 100.0 * float(merged["in_80"].mean()),
+        "hit_95": 100.0 * float(merged["in_95"].mean()),
+        "predicted_mean_anomaly": float(merged["expected_anomaly"].mean()),
+        "observed_mean_anomaly": float(merged["observed_anomaly"].mean()),
+        "naive_mae": naive_mae,
+        "period": f"{merged['date'].min():%b %Y} – {merged['date'].max():%b %Y}",
     }

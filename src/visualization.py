@@ -929,6 +929,11 @@ def plot_forecast_with_intervals(
 
     title = f"12-Month Climate Projection & Prediction Intervals ({variable_name}) — {location_name}"
     fig = _apply_scientific_theme(fig, title, "Date", f"{variable_name} ({units})")
+    # Six legend entries: place the legend below the plot so it does not cover the title
+    fig.update_layout(
+        legend={"orientation": "h", "yanchor": "top", "y": -0.16, "xanchor": "left", "x": 0.0},
+        margin={"b": 100},
+    )
     return fig
 
 
@@ -1117,3 +1122,55 @@ def plot_forecast_residuals_diagnostic(
     return fig
 
 
+
+
+def plot_forecast_verification(
+    table: pd.DataFrame,
+    variable_name: str,
+    units: str,
+    location_name: str,
+) -> go.Figure:
+    """
+    Reality check: the 12-month forecast (made from data up to the previous year) with its
+    80 % / 95 % bands, overlaid with the observations NASA released afterwards.
+    Observed points inside the 95 % band are green, outside are red.
+    """
+    t = table.sort_values("date")
+    x = list(t["date"])
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=x + x[::-1], y=list(t["ci_95_upper"]) + list(t["ci_95_lower"])[::-1],
+        fill="toself", fillcolor="rgba(255, 215, 0, 0.10)", line={"color": "rgba(255, 215, 0, 0.25)", "width": 1},
+        name="95% band (forecast)", hoverinfo="skip",
+    ))
+    fig.add_trace(go.Scatter(
+        x=x + x[::-1], y=list(t["ci_80_upper"]) + list(t["ci_80_lower"])[::-1],
+        fill="toself", fillcolor="rgba(255, 215, 0, 0.22)", line={"color": "rgba(255, 215, 0, 0.45)", "width": 1},
+        name="80% band (forecast)", hoverinfo="skip",
+    ))
+    fig.add_trace(go.Scatter(
+        x=x, y=t["clim_mean"], mode="lines", name="1981–2010 normal",
+        line={"color": "rgba(255, 255, 255, 0.5)", "width": 1.5, "dash": "dot"},
+        hovertemplate="Normal %{x|%b %Y}: %{y:.2f} " + units + "<extra></extra>",
+    ))
+    fig.add_trace(go.Scatter(
+        x=x, y=t["forecast"], mode="lines+markers", name="Forecast (made before the year started)",
+        line={"color": "#FFD700", "width": 2.6}, marker={"size": 6, "color": "#FFD700"},
+        hovertemplate="Forecast %{x|%b %Y}: %{y:.2f} " + units + "<extra></extra>",
+    ))
+    colors = ["#34D399" if ok else "#FF5A3C" for ok in t["in_95"]]
+    fig.add_trace(go.Scatter(
+        x=x, y=t["observed"], mode="markers", name="What NASA actually observed",
+        marker={"size": 11, "color": colors, "symbol": "diamond", "line": {"color": "#FFFFFF", "width": 1.2}},
+        hovertemplate="Observed %{x|%b %Y}: %{y:.2f} " + units + "<extra></extra>",
+    ))
+    period = f"{t['date'].min():%Y}" if t["date"].min().year == t["date"].max().year else f"{t['date'].min():%b %Y}–{t['date'].max():%b %Y}"
+    fig = _apply_scientific_theme(
+        fig, f"Reality Check — Forecast vs Observed {period} ({variable_name}) — {location_name}",
+        "Month", f"{variable_name} ({units})",
+    )
+    fig.update_layout(
+        legend={"orientation": "h", "yanchor": "top", "y": -0.16, "xanchor": "left", "x": 0.0},
+        margin={"b": 100},
+    )
+    return fig

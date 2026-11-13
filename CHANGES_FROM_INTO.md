@@ -289,3 +289,61 @@ streamlit run app.py                 # http://localhost:8501
 - **Previous Branch**: `feature/rainfall-analysis` (HEAD at `e448d70bbba427d1aa61531d92f94f2646ed546a`).
 - **Safety Checkpoint**: `refs/checkpoints/pre-forecasting` (`60f22e23c4b22baaff3dc6cd88cd32e734454854`).
 - **New Commit**: `c5c9c95ad43f870fd554bf78860cf5ab784d1b6e` (`feat: implement climate anomaly forecasting engine and project roadmap`).
+
+---
+
+## 14. Phase 5 Update: Checkpoints 7 & 8 + hosting readiness (2026-11-13, evening)
+
+Branch: `feature/anomaly-forecasting`. **Tests: 61 → 71, all passing.** No previously reported number changed
+(Cairo T2M winner is still Holt-Winters ETS, MASE = 0.800, MAE = 0.981 °C).
+
+| # | From | Into |
+|---|------|------|
+| 14.1 | Forecast checked only by back-testing on 2018–2022 | **2024 Reality Check**: forecast made from 1981–2023 is scored against the real 2024 months NASA POWER has since released (`data/verification/`, never used to fit or choose a model). New tab "✅ 2024 Reality Check" + Home finding **04** |
+| 14.2 | Prediction bands never checked | **Interval coverage**: each model's back-test now reports how many held-out months fell inside its 80% / 95% band, with an exact binomial verdict ("well calibrated" / "too narrow" / "too wide") — scoreboard columns in the Backtesting tab |
+| 14.3 | Only "expected Z-score" per month | **Exceedance probability**: P(above normal), P(Z ≥ +1), P(Z ≤ −1) per forecast month (Future Anomaly tab). Not shown for rain (not Gaussian) |
+| 14.4 | "Aswan +0.43 vs Cairo +0.29 °C/decade" with no test of the difference | **Regional warming-difference test** (`compare_regional_warming_rates`): paired series A − B, OLS + Newey-West **and** MK/Hamed-Rao, Holm across pairs. New section "⚖️ Is one region warming faster than another?" on the Regions page |
+| 14.5 | Technical text only | **Plain-language summaries** (`src/narrative.py`, Checkpoint 8): rule-based sentences built only from computed results, tagged Observed / Tested / Projected / Keep in mind, no causal claims. On Forecasting, Reality Check, Rainfall, Extremes, Regions |
+| 14.6 | Holt-Winters bands used unseeded Monte Carlo → numbers changed on every page load | Fixed seed (`random_state=2026`) → identical, reproducible intervals |
+| 14.7 | Forecast + back-test recomputed on every interaction | Cached (`cached_forecast`) — the page is fast after the first load |
+| 14.8 | Forecast chart legend overlapped the title | Legend moved below the chart |
+| 14.9 | `requirements.txt` with `>=` ranges | **Pinned versions** (Streamlit 1.67.0, pandas 3.1.1, …) so the hosted app behaves exactly like local |
+
+### 14.10 Results
+
+**2024 Reality Check** (forecast from 1981–2023 data, best model per series):
+
+| Region | Variable | Avg miss | "Same as last year" miss | Inside 95% band | Predicted anomaly | Observed anomaly |
+|---|---|---|---|---|---|---|
+| Greater Cairo | T2M | 0.70 °C | 0.98 | 92% | +0.82 | **+1.21** |
+| Greater Cairo | T2M_MAX | 1.32 °C | 2.11 | 100% | +0.42 | +0.78 |
+| Greater Cairo | T2M_MIN | 1.12 °C | 1.45 | 100% | +1.12 | +1.17 |
+| Alexandria | T2M | 0.76 °C | 1.01 | 100% | +2.11 | +1.44 |
+| Alexandria | T2M_MAX | 1.43 °C | 2.85 | 100% | +1.06 | +1.07 |
+| Alexandria | T2M_MIN | 0.97 °C | 1.09 | 92% | +1.11 | +1.63 |
+| Aswan | T2M | 1.18 °C | 1.43 | 100% | +1.23 | +1.18 |
+| Aswan | T2M_MAX | 1.18 °C | 1.87 | 100% | +1.38 | +0.58 |
+| Aswan | T2M_MIN | 1.18 °C | 1.96 | 100% | +1.17 | +1.21 |
+
+→ For **all 9 temperature series** the model beat the naive guess on truly unseen data. For **rainfall** it did
+not (Cairo 0.40 vs 0.40 mm/day, Alexandria 0.39 vs 0.27) — consistent with back-test MASE > 1. We say so on the page.
+
+**Regional warming difference (T2M, °C/decade):** Aswan − Cairo = **+0.155** [0.098, 0.211], Aswan − Alexandria =
+**+0.179** [0.100, 0.258] — both significant after Holm. Cairo vs Alexandria (+0.024) is **not** significant.
+For T2M_MAX and T2M_MIN no pair survives Holm correction.
+
+**Interval coverage (back-test, 60 held-out months):** temperature bands are mostly well calibrated (Cairo T2M:
+80% band 70%, 95% band 93%); some T2M_MIN 80% bands are slightly too narrow; rainfall bands are too narrow.
+
+### 14.11 New / changed files
+- `src/narrative.py` (new) — plain-language builders.
+- `src/forecasting.py` — `random_state`, `_inside`, `interval_coverage_verdict`, `exceedance_probability`, `verify_forecast_against_observations`; coverage in `backtest_models`; probability columns + `value_col` in `generate_12month_forecast`.
+- `src/trend_analysis.py` — `compare_regional_warming_rates`.
+- `src/visualization.py` — `plot_forecast_verification`; forecast legend placement.
+- `app.py` — Reality Check tab, Home finding 04 + Forecast button, regional difference section, plain-words boxes, caching, CSS.
+- `data/verification/nasa_power_{cairo,alexandria,aswan}_2024.csv` (new) — NASA POWER API, same grid cells and parameters, downloaded 2026-11-13.
+- `tests/test_checkpoint7_8.py` (new, 10 tests). `requirements.txt` pinned. `README.md` test badge 71/71.
+
+### 14.12 Still not done (deliberately)
+- **GPM IMERG cross-check of the 2015 rainfall jump** — needs an Earthdata login and a new data pipeline; stays as future work and is stated on the Rainfall page.
+- **Extending the analysis record to 2024** — the 1981–2023 record is kept frozen so every number in the docs stays valid; 2024 is used only as an independent test set.

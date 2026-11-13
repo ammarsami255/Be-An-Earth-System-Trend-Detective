@@ -8,6 +8,7 @@ Main Streamlit Application
 
 from __future__ import annotations
 import io
+import html
 import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
@@ -43,10 +44,16 @@ from src.preprocessing import (
     filter_by_date_range,
     handle_missing_values,
 )
-from src.forecasting import generate_12month_forecast
+from src.forecasting import (
+    generate_12month_forecast,
+    interval_coverage_verdict,
+    verify_forecast_against_observations,
+)
 from src.extremes_analysis import METRIC_INFO, analyze_temperature_extremes, compare_regional_extremes
 from src.rainfall_analysis import analyze_rainfall, compare_regional_rainfall
+from src.narrative import extremes_story, forecast_story, rainfall_story, regional_story, verification_story
 from src.trend_analysis import (
+    compare_regional_warming_rates,
     compute_autocorrelation,
     compare_temperature_extremes,
     compute_calendar_month_breakdown,
@@ -58,6 +65,7 @@ from src.trend_analysis import (
     synthesize_scientific_answers,
 )
 from src.visualization import (
+    plot_forecast_verification,
     plot_anomaly_bars,
     plot_autocorrelation_acf,
     plot_climatology_heatmap,
@@ -541,6 +549,30 @@ st.markdown(
     }
 
     .section-gap { height: 18px; }
+    .plain-words {
+        margin: 6px 0 18px 0; padding: 16px 18px 6px 18px; border-radius: 16px;
+        background: linear-gradient(180deg, rgba(52, 211, 153, 0.08), rgba(15, 27, 51, 0.85));
+        border: 1px solid rgba(52, 211, 153, 0.30);
+    }
+    .plain-words .pw-title { font-weight: 800; color: #FFFFFF; font-size: 1.02rem; margin-bottom: 8px; }
+    .plain-words ul { list-style: none; padding: 0; margin: 0; }
+    .plain-words li {
+        display: flex; gap: 12px; align-items: flex-start;
+        color: #D7E0EE; font-size: 0.95rem; line-height: 1.55; margin-bottom: 10px;
+    }
+    .plain-words .pw-tag {
+        flex: none; min-width: 118px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em;
+        text-transform: uppercase; padding: 3px 8px; border-radius: 8px; text-align: center;
+        background: rgba(148, 163, 184, 0.12); color: #CBD5E1;
+    }
+    .plain-words .pw-observed .pw-tag { background: rgba(76, 141, 255, 0.16); color: #9CC2FF; }
+    .plain-words .pw-statistical .pw-tag { background: rgba(52, 211, 153, 0.14); color: #6EE7B7; }
+    .plain-words .pw-projected .pw-tag { background: rgba(245, 158, 11, 0.14); color: #FCD34D; }
+    .plain-words .pw-caution .pw-tag { background: rgba(255, 90, 60, 0.14); color: #FF9F8A; }
+    @media (max-width: 640px) {
+        .plain-words li { flex-direction: column; gap: 4px; font-size: 0.88rem; }
+        .plain-words .pw-tag { min-width: 0; }
+    }
     /* headings of the original pages shown inside tabs become sub-headings */
     div[data-testid="stTabs"] h2 {
         font-size: 1.35rem !important;
@@ -564,7 +596,7 @@ st.markdown(
        laptop > 1180px · small laptop 960–1180 · tablet 640–960 · phone < 640
        ===================================================== */
     /* KPI rows: 4 → 2 → 1 cards per row */
-    .st-key-kpis div[data-testid="stHorizontalBlock"] { flex-wrap: wrap; gap: 1rem; }
+    :is(.st-key-kpis, .st-key-fc_kpis, .st-key-rc_kpis) div[data-testid="stHorizontalBlock"] { flex-wrap: wrap; gap: 1rem; }
     .st-key-topbar label[data-testid="stRadioOption"] p { transition: font-size 0.15s ease; }
 
     @media (max-width: 1180px) {
@@ -575,7 +607,7 @@ st.markdown(
     }
 
     @media (max-width: 1024px) {
-        .st-key-kpis div[data-testid="stColumn"] {
+        :is(.st-key-kpis, .st-key-fc_kpis, .st-key-rc_kpis) div[data-testid="stColumn"] {
             flex: 1 1 calc(50% - 0.5rem) !important;
             min-width: calc(50% - 0.5rem) !important;
             width: calc(50% - 0.5rem) !important;
@@ -627,8 +659,8 @@ st.markdown(
         .hero-title { font-size: 1.95rem; }
         .hero-lead { font-size: 0.98rem; }
 
-        .st-key-kpis div[data-testid="stHorizontalBlock"] { gap: 0.6rem; }
-        .st-key-kpis div[data-testid="stColumn"] {
+        :is(.st-key-kpis, .st-key-fc_kpis, .st-key-rc_kpis) div[data-testid="stHorizontalBlock"] { gap: 0.6rem; }
+        :is(.st-key-kpis, .st-key-fc_kpis, .st-key-rc_kpis) div[data-testid="stColumn"] {
             flex: 1 1 calc(50% - 0.3rem) !important;
             min-width: calc(50% - 0.3rem) !important;
             width: calc(50% - 0.3rem) !important;
@@ -662,7 +694,7 @@ st.markdown(
     }
 
     @media (max-width: 360px) {
-        .st-key-kpis div[data-testid="stColumn"] { flex: 1 1 100% !important; min-width: 100% !important; width: 100% !important; }
+        :is(.st-key-kpis, .st-key-fc_kpis, .st-key-rc_kpis) div[data-testid="stColumn"] { flex: 1 1 100% !important; min-width: 100% !important; width: 100% !important; }
     }
     </style>
     """,
@@ -1419,6 +1451,34 @@ def page_regional() -> None:
                 "Point estimates differ, but the 95% confidence intervals overlap, so we do **not** claim that the "
                 "extremes are warming faster than the mean without a formal difference test."
             )
+
+        # Formal test: do two regions warm at different speeds?
+        st.markdown("### ⚖️ Is one region warming faster than another?")
+        st.markdown(
+            "Seeing +0.43 °C/decade in Aswan and +0.29 °C/decade in Cairo is not proof that Aswan warms faster — "
+            "both numbers carry uncertainty. We test the **difference** directly on the paired series "
+            "*annual(A) − annual(B)*, which cancels the weather the regions share. A pair counts as different only if "
+            "OLS with Newey-West errors **and** Mann-Kendall/Hamed-Rao both reject equal rates, **and** the result "
+            "survives Holm correction for testing three pairs."
+        )
+        diff_labels = {"T2M": "mean temperature", "T2M_MAX": "monthly hottest temperature", "T2M_MIN": "monthly coldest temperature"}
+        diff_var = st.radio(
+            "Temperature measure", list(diff_labels.keys()), horizontal=True, key="diff_var",
+            format_func=lambda v: f"{v} · {diff_labels[v]}",
+        )
+        diff_df = cached_warming_diff(diff_var)
+        if not diff_df.empty:
+            render_plain_words(regional_story(diff_df, diff_labels[diff_var]))
+            st.dataframe(pd.DataFrame({
+                "Pair": diff_df["faster_region"] + " vs " + diff_df["slower_region"],
+                "Rates (°C/decade)": [f"{a:+.2f} vs {b:+.2f}" for a, b in zip(diff_df["faster_rate_per_decade"], diff_df["slower_rate_per_decade"])],
+                "Difference (°C/decade)": diff_df["difference_per_decade"].map(lambda v: f"{v:+.3f}"),
+                "95% CI (HAC)": [f"[{lo:+.3f}, {hi:+.3f}]" for lo, hi in zip(diff_df["diff_ci_lower_per_decade"], diff_df["diff_ci_upper_per_decade"])],
+                "OLS-HAC p": diff_df["ols_hac_p"].map(lambda v: f"{v:.2e}"),
+                "Hamed-Rao p": diff_df["hr_p"].map(lambda v: f"{v:.2e}"),
+                "Holm p": diff_df["holm_p"].map(lambda v: f"{v:.2e}"),
+                "Different speed?": diff_df["is_significant"].map({True: "YES", False: "NO"}),
+            }), use_container_width=True, hide_index=True)
     else:
         st.warning("Regional datasets are not available yet.")
 
@@ -1780,6 +1840,30 @@ def page_anomalies() -> None:
 # ==========================================
 # PAGE: CLIMATE ANOMALY FORECASTING & VALIDATION
 # ==========================================
+# Observations NASA POWER released AFTER the bundled 1981–2023 record. They are never used to fit
+# or select a model — only to score the forecast afterwards (true out-of-sample verification).
+VERIFY_FILES: Dict[str, str] = {
+    "Greater Cairo": os.path.join("data", "verification", "nasa_power_cairo_2024.csv"),
+    "Alexandria": os.path.join("data", "verification", "nasa_power_alexandria_2024.csv"),
+    "Aswan": os.path.join("data", "verification", "nasa_power_aswan_2024.csv"),
+}
+
+
+@st.cache_data(show_spinner=False)
+def load_verification_observations(region: str) -> pd.DataFrame:
+    path = VERIFY_FILES.get(region)
+    if not path or not os.path.exists(path):
+        return pd.DataFrame()
+    with open(path, "r", encoding="utf-8") as f:
+        return auto_load_dataset(f.read(), default_location=region)[0]
+
+
+@st.cache_data(show_spinner=False, max_entries=48)
+def cached_forecast(var_df: pd.DataFrame, value_col: str, model_key: str) -> Dict[str, Any]:
+    """Backtest + 12-month forecast are deterministic (seeded), so cache them per input."""
+    return generate_12month_forecast(var_df, variable=value_col, model_type=model_key, horizon=12, n_splits_backtest=5)
+
+
 def page_forecasting() -> None:
     page_header(
         "🔮",
@@ -1843,12 +1927,10 @@ def page_forecasting() -> None:
 
     # Run forecasting and backtesting engine
     with st.spinner(f"Computing chronological backtest and 12-month {target_var} projections..."):
-        fc_res = generate_12month_forecast(
+        fc_res = cached_forecast(
             var_df,
-            variable="value" if "value" in var_df.columns else target_var,
-            model_type=chosen_model_key,
-            horizon=12,
-            n_splits_backtest=5,
+            "value" if "value" in var_df.columns else target_var,
+            chosen_model_key,
         )
 
     fc_df = fc_res["forecast_df"]
@@ -1866,12 +1948,56 @@ def page_forecasting() -> None:
         )
 
     # 4 TABS LAYOUT
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab_rc, tab2, tab3, tab4 = st.tabs([
         "📊 Executive Overview",
+        "✅ 2024 Reality Check",
         "📈 Projections & Intervals",
         "⚠️ Future Anomaly Classification",
         "🧪 Chronological Validation & Backtesting",
     ])
+
+    # --------------------------------------------------------------------------
+    # TAB: REALITY CHECK AGAINST NEWLY RELEASED NASA OBSERVATIONS
+    # --------------------------------------------------------------------------
+    with tab_rc:
+        st.markdown("### ✅ Did the forecast come true?")
+        obs_all = load_verification_observations(active_location) if active_location in VERIFY_FILES else pd.DataFrame()
+        obs_var = obs_all[obs_all["variable"] == target_var] if not obs_all.empty else obs_all
+        ver = verify_forecast_against_observations(fc_res, obs_var) if not obs_var.empty else {"available": False}
+        if not ver.get("available"):
+            st.info(
+                "A reality check needs NASA observations released after the forecast was made. They are bundled for "
+                "the three preset regions (Jan–Dec 2024). Pick Greater Cairo, Alexandria or Aswan in the top bar."
+            )
+        else:
+            r1, r2, r3, r4 = st.container(key="rc_kpis").columns(4)
+            beat = ver["mae"] < ver["naive_mae"]
+            kpi_card(r1, "Average miss", f"{ver['mae']:.2f} {units}",
+                     f"'Same as last year' missed by {ver['naive_mae']:.2f}", "green" if beat else "slate")
+            kpi_card(r2, "Inside 95% band", f"{ver['hit_95']:.0f}%",
+                     f"{int(ver['table']['in_95'].sum())} of {ver['n_months']} real months", "blue")
+            kpi_card(r3, "Predicted anomaly", f"{ver['predicted_mean_anomaly']:+.2f} {units}",
+                     "vs 1981–2010 normal (forecast)", "orange")
+            kpi_card(r4, "Observed anomaly", f"{ver['observed_mean_anomaly']:+.2f} {units}",
+                     f"what NASA recorded, {ver['period']}", "red")
+            render_plain_words(verification_story(ver, units, active_location, fc_res["is_precipitation"]))
+            st.plotly_chart(
+                plot_forecast_verification(ver["table"], target_var, units, active_location),
+                use_container_width=True,
+            )
+            st.caption(
+                "🔒 **No peeking.** The models are fitted and selected only on 1981–2023. The 2024 values were downloaded "
+                "afterwards from the NASA POWER API (same MERRA-2 grid cell) and are used only for this score. "
+                "Diamonds: green = inside the 95% band, red = outside. NASA may revise recent months slightly."
+            )
+            with st.expander("Month-by-month table"):
+                vt = ver["table"][["date", "forecast", "ci_95_lower", "ci_95_upper", "observed", "error", "in_95"]].copy()
+                vt["date"] = vt["date"].dt.strftime("%b %Y")
+                st.dataframe(vt.rename(columns={
+                    "date": "Month", "forecast": f"Forecast ({units})", "ci_95_lower": "95% low",
+                    "ci_95_upper": "95% high", "observed": f"Observed ({units})", "error": "Observed − forecast",
+                    "in_95": "Inside 95% band?",
+                }), use_container_width=True, hide_index=True)
 
     # --------------------------------------------------------------------------
     # TAB 1: EXECUTIVE OVERVIEW
@@ -1896,6 +2022,8 @@ def page_forecasting() -> None:
 
         ci_spread = kpis["mean_ci95_spread"]
         kpi_card(k4, "Uncertainty Spread", f"±{ci_spread:.2f} {units}", "Mean 95% Confidence Half-Width", "slate")
+
+        render_plain_words(forecast_story(fc_res, target_var, units, active_location))
 
         # Primary Forecast Figure
         fig_fc = plot_forecast_with_intervals(
@@ -1944,7 +2072,7 @@ def page_forecasting() -> None:
 
         table_df = fc_df[display_cols].copy()
         table_df["date"] = table_df["date"].dt.strftime("%Y-%m-%d")
-        table_df.rename(columns=rename_map, inplace=True)
+        table_df = table_df.rename(columns=rename_map)
         st.dataframe(table_df, use_container_width=True)
 
         col_dl, col_exp = st.columns([1, 3])
@@ -1983,8 +2111,13 @@ def page_forecasting() -> None:
             "month_name", "forecast", "clim_mean", "expected_anomaly",
             "expected_z_score", "expected_z_ci95_lower", "expected_z_ci95_upper", "severity_bracket"
         ]
+        if not fc_res["is_precipitation"]:
+            anom_display_cols += ["prob_above_normal", "prob_z_ge_plus1", "prob_z_le_minus1"]
         anom_table = fc_df[anom_display_cols].copy()
-        anom_table.rename(columns={
+        anom_table = anom_table.rename(columns={
+            "prob_above_normal": "P(above normal) %",
+            "prob_z_ge_plus1": "P(unusually warm, Z≥+1) %",
+            "prob_z_le_minus1": "P(unusually cold, Z≤−1) %",
             "month_name": "Month",
             "forecast": f"Forecast ({units})",
             "clim_mean": f"Normal ({units})",
@@ -1993,8 +2126,15 @@ def page_forecasting() -> None:
             "expected_z_ci95_lower": "Z 95% Low (σ)",
             "expected_z_ci95_upper": "Z 95% High (σ)",
             "severity_bracket": "Severity Classification",
-        }, inplace=True)
+        })
         st.dataframe(anom_table, use_container_width=True)
+
+        if not fc_res["is_precipitation"]:
+            st.caption(
+                "🎲 **Expected value ≠ risk.** The probability columns turn each forecast into an actual chance, "
+                "using a normal predictive distribution whose spread comes from the 95% prediction interval "
+                "(σ = width / 3.92). A month forecast exactly on the +1σ line still has only ~50% chance of exceeding it."
+            )
 
         st.info(
             "💡 **Scientific Distinction — Observed vs. Expected Anomalies**:\n\n"
@@ -2029,9 +2169,15 @@ def page_forecasting() -> None:
                 "Average Test MAE": f"{m_v['mean_mae']:.3f} {units}",
                 "Average Test RMSE": f"{m_v['mean_rmse']:.3f} {units}",
                 "MASE (vs Seasonal Naive)": f"{m_v['mase']:.3f}",
+                "80% band hit-rate": f"{m_v['coverage_80']:.0f}% · {interval_coverage_verdict(m_v['coverage_80'], 80, m_v['n_test_months'])}",
+                "95% band hit-rate": f"{m_v['coverage_95']:.0f}% · {interval_coverage_verdict(m_v['coverage_95'], 95, m_v['n_test_months'])}",
                 "Tournament Status": "🏅 Best Model (Winner)" if m_k == backtest["tournament_winner_key"] else "Evaluated Candidate",
             })
         st.dataframe(pd.DataFrame(score_rows), use_container_width=True)
+        st.caption(
+            "🎯 **Are the uncertainty bands honest?** Hit-rate = share of the held-out months that actually fell inside "
+            "each model's band. A well-calibrated 95% band should catch ≈95% of them; verdicts use an exact binomial test (α = 0.05)."
+        )
 
         # Split-by-Split Details Expander
         with st.expander("🔍 Detailed Multi-Origin Backtest Results (5 Splits)", expanded=False):
@@ -2180,6 +2326,32 @@ def cached_temperature_summary(region: str) -> Dict[str, Any]:
             "start": int(x.min()), "end": int(x.max())}
 
 
+@st.cache_data(show_spinner=False)
+def cached_warming_diff(variable: str) -> pd.DataFrame:
+    return compare_regional_warming_rates(preset_frames(), variable=variable)
+
+
+STORY_TAGS = {
+    "observed": ("📡", "Observed"),
+    "statistical": ("📐", "Tested"),
+    "projected": ("🔮", "Projected"),
+    "caution": ("⚠️", "Keep in mind"),
+}
+
+
+def render_plain_words(story, title: str = "In plain words") -> None:
+    """Checkpoint 8: plain-language summary built only from verified outputs (src/narrative.py)."""
+    items = "".join(
+        f'<li class="pw-{kind}"><span class="pw-tag">{STORY_TAGS[kind][0]} {STORY_TAGS[kind][1]}</span>'
+        f'<span>{html.escape(text)}</span></li>'
+        for kind, text in story
+    )
+    st.markdown(
+        f'<div class="plain-words"><div class="pw-title">🗣️ {title}</div><ul>{items}</ul></div>',
+        unsafe_allow_html=True,
+    )
+
+
 def kpi_card(col, label: str, value: str, sub: str, accent: str = "blue") -> None:
     col.markdown(
         f'<div class="kpi-card kpi-{accent}"><div class="kpi-label">{label}</div>'
@@ -2279,7 +2451,22 @@ def page_home() -> None:
             else:
                 rain_title = "Rain stayed noisy."
                 rain_text = "No gradual or abrupt change is detectable."
-            st.markdown("#### Three findings")
+            # 04 — forecast made from 1981–2023, scored against NASA's real 2024 months
+            ver_html = ""
+            obs_home = load_verification_observations(region)
+            if not obs_home.empty:
+                df_home = load_bundled_dataset(PRESET_FILES[region], region)[0]
+                fc_home = cached_forecast(df_home[df_home["variable"] == "T2M"].copy(), "value", "best")
+                ver_home = verify_forecast_against_observations(fc_home, obs_home[obs_home["variable"] == "T2M"])
+                if ver_home.get("available"):
+                    ver_html = (
+                        f'<div class="finding"><span class="finding-num">04</span><div>'
+                        f'<b>We predicted {ver_home["period"][-4:]} before seeing it.</b> Trained only on data to 2023, the '
+                        f'model expected {ver_home["predicted_mean_anomaly"]:+.1f} °C above normal; NASA then recorded '
+                        f'{ver_home["observed_mean_anomaly"]:+.1f} °C, with {ver_home["hit_95"]:.0f}% of months inside '
+                        f'our 95% band.</div></div>'
+                    )
+            st.markdown("#### Key findings")
             st.markdown(
                 f"""
                 <div class="finding"><span class="finding-num">01</span><div>
@@ -2291,13 +2478,16 @@ def page_home() -> None:
                 {hot_word}.</div></div>
                 <div class="finding"><span class="finding-num">03</span><div>
                 <b>{rain_title}</b> {rain_text}</div></div>
+                {ver_html}
                 """,
                 unsafe_allow_html=True,
             )
-            b1, b2, b3 = st.columns(3)
+            b1, b2 = st.columns(2)
             b1.button("Temperature →", on_click=go_to, args=("🌡️ Temperature",), use_container_width=True)
             b2.button("Extremes →", on_click=go_to, args=("🔥 Extremes",), use_container_width=True)
+            b3, b4 = st.columns(2)
             b3.button("Rainfall →", on_click=go_to, args=("🌧️ Rainfall",), use_container_width=True)
+            b4.button("Forecast →", on_click=go_to, args=("🔮 Forecasting",), use_container_width=True)
         render_four_questions(temp["answers"], f"Temperature in {region}")
 
     with tab_about:
@@ -2351,6 +2541,7 @@ def page_rainfall() -> None:
     tab_o, tab_c, tab_s, tab_r = st.tabs(["📋 Overview", "📊 Charts", "🔬 Statistics", "🗺️ Regions"])
 
     with tab_o:
+        render_plain_words(rainfall_story(res, region))
         render_four_questions(res["summary"], "Rainfall")
         if cp["is_significant"]:
             st.warning(
@@ -2472,6 +2663,7 @@ def page_extremes() -> None:
     tab_o, tab_c, tab_s, tab_r = st.tabs(["📋 Overview", "📊 Charts", "🔬 Statistics", "🗺️ Regions"])
 
     with tab_o:
+        render_plain_words(extremes_story(res, region))
         render_four_questions(res["summary"], "Temperature Extremes")
         with st.expander("What the five indices mean"):
             st.markdown(
