@@ -126,6 +126,7 @@ def test_real_nasa_rainfall_results():
     # Abrupt upward shift in the mid-2010s for Cairo and Alexandria, none for Aswan
     cp = cairo["change_point"]
     assert cp["is_significant"] and cp["direction"] == "upward"
+    assert cp["change_year"] == 2014
     assert cp["new_regime_start"] == 2015
     assert table.loc["Alexandria", "Abrupt shift (Pettitt)"] == "Yes, from 2015"
     assert table.loc["Aswan", "Abrupt shift (Pettitt)"] == "No"
@@ -143,13 +144,15 @@ def test_pettitt_finds_step_change_without_gradual_trend():
     rng = np.random.default_rng(1)
     years = np.arange(1981, 2024)
     values = np.where(years >= 2010, 100.0, 40.0) + rng.normal(0, 8, len(years))
-    cp = pettitt_change_point_test(values, years)
+    cp = pettitt_change_point_test(values, years, n_perms=500, seed=42)
     assert cp["is_significant"]
     assert cp["new_regime_start"] == 2010
     assert cp["change_year"] == 2009
     assert cp["direction"] == "upward"
     assert cp["mean_before"] == pytest.approx(40.0, abs=4)
     assert cp["mean_after"] == pytest.approx(100.0, abs=5)
+    assert cp["p_permutation"] is not None
+    assert cp["p_permutation"] < 0.05
 
 
 def test_pettitt_no_shift_in_pure_noise():

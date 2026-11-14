@@ -215,4 +215,135 @@ streamlit run app.py                 # http://localhost:8501
 - Streamlit prints deprecation warnings for `use_container_width` (Streamlit wants `width="stretch"`); it still works in the pinned version, but should be replaced before upgrading Streamlit.
 - `scripts/reproducible_scientific_audit.py` crashes on the Windows console because of the `✓` character; run it with `PYTHONIOENCODING=utf-8` (it passes).
 - The rainfall jump in 2015 is **not yet validated** against an independent dataset (GPM IMERG).
-- Not started: rainfall anomaly detection (e.g. SPI), forecasting.
+- Completed: Climate Anomaly Detection Engine (WMO 1981–2010 normal, persistent spells, multi-scalar SPI, compound extremes).
+- Completed: Climate Anomaly Forecasting System (Seasonal Naive baseline, Holt-Winters ETS, SARIMAX, expanding-window multi-origin backtesting, prediction intervals, and dedicated 4-tab Streamlit forecasting interface).
+
+---
+
+## 13. Phase 3 & 4 Update: Climate Anomaly Detection & Anomaly Forecasting Engine (2026-11-13)
+
+### 13.1 Anomaly Forecasting Engine (`src/forecasting.py`)
+- **Three Candidate Architectures Implemented**:
+  1. **Seasonal Naive Baseline Benchmark**: Point projection $\hat{y}_{T+h} = y_{T+h-12}$ repeating the final historical year's seasonal cycle. Residual variance $\hat{\sigma}_{\text{naive}}^2$ computed from in-sample seasonal differences $y_t - y_{t-12}$ with multi-step horizon variance scaling $\text{Var}(\hat{y}_{T+h}) = k \cdot \hat{\sigma}^2$ ($k = \lceil h/12 \rceil$).
+  2. **Holt-Winters Additive Exponential Smoothing (ETS)**: State-space additive level, linear trend, and 12-month seasonality fit via MLE/SSE. Generates 80% and 95% prediction intervals via 1,000 Monte Carlo innovations simulations.
+  3. **SARIMAX State-Space Model**: Parsimonious $\text{SARIMA}(1,0,0) \times (1,1,0)_{12}$ formulation with exact analytical Kalman filter covariance prediction intervals.
+- **Strict Chronological Expanding-Window Cross-Validation**:
+  - Evaluated across **5 historical forecast origins** (2018–2022) with a 12-month test horizon per origin.
+  - Zero future data leakage: each split trains strictly on observations prior to the forecast origin.
+  - Out-of-sample metrics computed per split and aggregate: MAE, RMSE, and **Mean Absolute Scaled Error (MASE)** relative to the in-sample Seasonal Naive benchmark (Hyndman & Koehler, 2006).
+  - Model tournament automatically designates the model with lowest out-of-sample MAE as winner.
+  - Empirical Cairo T2M tournament result: Holt-Winters ETS wins with $\text{MAE} = 0.981^\circ\text{C}$, $\text{RMSE} = 1.201^\circ\text{C}$, and $\text{MASE} = 0.800$ (outperforming Seasonal Naive $\text{MAE} = 1.287^\circ\text{C}$).
+- **Probabilistic Prediction Intervals (80% & 95%)**:
+  - Fully monotonic uncertainty bounds ($\text{CI}_{95,\text{low}} \le \text{CI}_{80,\text{low}} \le \hat{y} \le \text{CI}_{80,\text{high}} \le \text{CI}_{95,\text{high}}$).
+- **WMO 1981–2010 Climatological Anomaly Evaluation**:
+  - Projects expected departures $\hat{A}_{T+h} = \hat{y}_{T+h} - \mu_{m(h)}$ and standardized departures $\hat{Z}_{T+h} = \hat{A}_{T+h} / \sigma_{m(h)}$.
+  - Maps departures into standard IPCC/WMO severity brackets: Extreme Warm ($\ge +3\sigma$), Severe Warm ($+2\sigma$ to $+3\sigma$), Moderate Warm ($+1\sigma$ to $+2\sigma$), Near Normal ($-1\sigma$ to $+1\sigma$), Moderate Cold ($-2\sigma$ to $-1\sigma$), Severe Cold ($-3\sigma$ to $-2\sigma$), and Extreme Cold ($\le -3\sigma$).
+- **Physical Guardrails**:
+  - Lower bound clamping at $0.0\text{ mm}$ for precipitation predictions and prediction intervals.
+  - Automatic **Hyper-Arid Regime Advisory** banner for regions with $>80\%$ zero-rain months (e.g., Aswan), alerting users that background models reflect trace baseline precipitation and cannot deterministically extrapolate episodic convective pulses.
+
+### 13.2 Dashboard Integration (`app.py` & `src/visualization.py`)
+- **Top Navigation Integration**:
+  - Added `"🔮 Forecasting": page_forecasting` to `NAV_PAGES` as a primary navigation item.
+  - Adjusted topbar layout ratios to `[1.5, 8.4, 1.5, 0.7]` for responsive rendering across desktop and mobile.
+- **Four Analytical Forecasting Tabs**:
+  1. **📊 Executive Overview**:
+     - Model selector, variable selector, 4 KPI cards (Validation Winner with MASE, 12-Month Expected Anomaly, Peak Forecast Month, 95% Uncertainty Spread).
+     - Primary forecast plot (`plot_forecast_with_intervals`): 5-year historical line, 12-month future projection, 80% & 95% dual shaded yellow envelopes, dotted WMO normal curve, and vertical red dashed dividing line at forecast origin.
+     - Hyper-arid advisory banner for Aswan precipitation.
+  2. **📈 Projections & Intervals**:
+     - Complete 12-month projection table with point forecasts, 80%/95% CI bounds, WMO normal, expected departures, and Percent of Normal.
+     - One-click CSV export button (`earthtrend_<region>_<var>_forecast_2024.csv`).
+     - Expandable model specification and fitted parameters panel.
+  3. **⚠️ Future Anomaly Classification**:
+     - Departure bar chart (`plot_future_anomaly_bars`) with asymmetric 95% uncertainty whiskers.
+     - Month-by-month severity classification table.
+     - Conceptual callout box articulating the distinction between historical observed ground truth vs. forward probabilistic projections.
+  4. **🧪 Chronological Validation & Backtesting**:
+     - Grouped bar chart (`plot_model_backtest_comparison`) comparing MAE, RMSE, and MASE across all 3 candidate models with MASE = 1.0 benchmark parity line.
+     - Multi-origin tournament scoreboard across all 5 test splits.
+     - 2-panel residual diagnostic charts (`plot_forecast_residuals_diagnostic`): Residual time series and distribution histogram.
+
+### 13.3 Test Suite & Quality Assurance
+- **Total Tests**: **61 tests passed out of 61 (100% pass rate in ~21s)**.
+  - `tests/test_forecasting.py`: 8 new unit and integration tests covering Seasonal Naive, Holt-Winters ETS, SARIMAX, prediction interval monotonicity, precipitation non-negativity clamping, expanding-window backtesting tournament, future anomaly classification, Cairo end-to-end real data pipeline, and short-series fallbacks.
+  - `tests/test_streamlit_app.py`: Headless AppTest verified navigation across all 9 pages including `"🔮 Forecasting"`.
+  - `tests/test_anomaly_detection.py`: 16 anomaly detection tests passing.
+  - `tests/test_rainfall_analysis.py`: 11 rainfall and Pettitt tests passing.
+  - `tests/test_extremes_analysis.py`: 6 temperature extreme tests passing.
+  - `tests/test_trend_analysis.py`: 11 trend and Hamed-Rao tests passing.
+  - `tests/test_preprocessing.py`: 6 data cleaning tests passing.
+  - `tests/test_integration.py`: 1 full pipeline integration test passing.
+- **Reproducible Scientific Audit**: `python scripts/reproducible_scientific_audit.py` executed with zero numerical discrepancies across all regional trends, Hamed-Rao corrections, and Cairo calendar month multiple testing adjustments.
+- **Warnings Forensics**: All 21 warnings confirmed as pre-existing synthetic zero-variance test fixtures (20 SciPy log warnings in `test_anomaly_detection.py`) and 1 external Dash plugin hook deprecation. Zero warnings originated from forecasting code.
+
+### 13.4 Dependencies & Documentation Updates
+- `requirements.txt`: Added `statsmodels>=0.14.0`.
+- `README.md`: Updated test badge to `61/61_Passed`, added Section 2.6 documenting the Anomaly Forecasting Engine, and updated technology stack.
+- `MATHEMATICAL_AND_TECHNICAL_DECISIONS.md`: Added Section 2.6 detailing mathematical derivations for Seasonal Naive, Holt-Winters ETS, SARIMAX, MASE, prediction intervals, and the technical decisions comparison table.
+- `SOURCES_AND_REFERENCES.md`: Added citations for Hyndman & Athanasopoulos (2018), Hyndman & Koehler (2006), Box, Jenkins, Reinsel, & Ljung (2015), and Holt (1957) / Winters (1960).
+- `SESSION_HANDOVER.md`: Updated Section 6 recording the implementation, architecture, and verification outcomes.
+
+### 13.5 Git Provenance & Branch Records
+- **New Branch**: `feature/anomaly-forecasting` (branched from local working tree on `feature/rainfall-analysis`).
+- **Previous Branch**: `feature/rainfall-analysis` (HEAD at `e448d70bbba427d1aa61531d92f94f2646ed546a`).
+- **Safety Checkpoint**: `refs/checkpoints/pre-forecasting` (`60f22e23c4b22baaff3dc6cd88cd32e734454854`).
+- **New Commit**: `c5c9c95ad43f870fd554bf78860cf5ab784d1b6e` (`feat: implement climate anomaly forecasting engine and project roadmap`).
+
+---
+
+## 14. Phase 5 Update: Checkpoints 7 & 8 + hosting readiness (2026-11-13, evening)
+
+Branch: `feature/anomaly-forecasting`. **Tests: 61 → 71, all passing.** No previously reported number changed
+(Cairo T2M winner is still Holt-Winters ETS, MASE = 0.800, MAE = 0.981 °C).
+
+| # | From | Into |
+|---|------|------|
+| 14.1 | Forecast checked only by back-testing on 2018–2022 | **2024 Reality Check**: forecast made from 1981–2023 is scored against the real 2024 months NASA POWER has since released (`data/verification/`, never used to fit or choose a model). New tab "✅ 2024 Reality Check" + Home finding **04** |
+| 14.2 | Prediction bands never checked | **Interval coverage**: each model's back-test now reports how many held-out months fell inside its 80% / 95% band, with an exact binomial verdict ("well calibrated" / "too narrow" / "too wide") — scoreboard columns in the Backtesting tab |
+| 14.3 | Only "expected Z-score" per month | **Exceedance probability**: P(above normal), P(Z ≥ +1), P(Z ≤ −1) per forecast month (Future Anomaly tab). Not shown for rain (not Gaussian) |
+| 14.4 | "Aswan +0.43 vs Cairo +0.29 °C/decade" with no test of the difference | **Regional warming-difference test** (`compare_regional_warming_rates`): paired series A − B, OLS + Newey-West **and** MK/Hamed-Rao, Holm across pairs. New section "⚖️ Is one region warming faster than another?" on the Regions page |
+| 14.5 | Technical text only | **Plain-language summaries** (`src/narrative.py`, Checkpoint 8): rule-based sentences built only from computed results, tagged Observed / Tested / Projected / Keep in mind, no causal claims. On Forecasting, Reality Check, Rainfall, Extremes, Regions |
+| 14.6 | Holt-Winters bands used unseeded Monte Carlo → numbers changed on every page load | Fixed seed (`random_state=2026`) → identical, reproducible intervals |
+| 14.7 | Forecast + back-test recomputed on every interaction | Cached (`cached_forecast`) — the page is fast after the first load |
+| 14.8 | Forecast chart legend overlapped the title | Legend moved below the chart |
+| 14.9 | `requirements.txt` with `>=` ranges | **Pinned versions** (Streamlit 1.67.0, pandas 3.1.1, …) so the hosted app behaves exactly like local |
+
+### 14.10 Results
+
+**2024 Reality Check** (forecast from 1981–2023 data, best model per series):
+
+| Region | Variable | Avg miss | "Same as last year" miss | Inside 95% band | Predicted anomaly | Observed anomaly |
+|---|---|---|---|---|---|---|
+| Greater Cairo | T2M | 0.70 °C | 0.98 | 92% | +0.82 | **+1.21** |
+| Greater Cairo | T2M_MAX | 1.32 °C | 2.11 | 100% | +0.42 | +0.78 |
+| Greater Cairo | T2M_MIN | 1.12 °C | 1.45 | 100% | +1.12 | +1.17 |
+| Alexandria | T2M | 0.76 °C | 1.01 | 100% | +2.11 | +1.44 |
+| Alexandria | T2M_MAX | 1.43 °C | 2.85 | 100% | +1.06 | +1.07 |
+| Alexandria | T2M_MIN | 0.97 °C | 1.09 | 92% | +1.11 | +1.63 |
+| Aswan | T2M | 1.18 °C | 1.43 | 100% | +1.23 | +1.18 |
+| Aswan | T2M_MAX | 1.18 °C | 1.87 | 100% | +1.38 | +0.58 |
+| Aswan | T2M_MIN | 1.18 °C | 1.96 | 100% | +1.17 | +1.21 |
+
+→ For **all 9 temperature series** the model beat the naive guess on truly unseen data. For **rainfall** it did
+not (Cairo 0.40 vs 0.40 mm/day, Alexandria 0.39 vs 0.27) — consistent with back-test MASE > 1. We say so on the page.
+
+**Regional warming difference (T2M, °C/decade):** Aswan − Cairo = **+0.155** [0.098, 0.211], Aswan − Alexandria =
+**+0.179** [0.100, 0.258] — both significant after Holm. Cairo vs Alexandria (+0.024) is **not** significant.
+For T2M_MAX and T2M_MIN no pair survives Holm correction.
+
+**Interval coverage (back-test, 60 held-out months):** temperature bands are mostly well calibrated (Cairo T2M:
+80% band 70%, 95% band 93%); some T2M_MIN 80% bands are slightly too narrow; rainfall bands are too narrow.
+
+### 14.11 New / changed files
+- `src/narrative.py` (new) — plain-language builders.
+- `src/forecasting.py` — `random_state`, `_inside`, `interval_coverage_verdict`, `exceedance_probability`, `verify_forecast_against_observations`; coverage in `backtest_models`; probability columns + `value_col` in `generate_12month_forecast`.
+- `src/trend_analysis.py` — `compare_regional_warming_rates`.
+- `src/visualization.py` — `plot_forecast_verification`; forecast legend placement.
+- `app.py` — Reality Check tab, Home finding 04 + Forecast button, regional difference section, plain-words boxes, caching, CSS.
+- `data/verification/nasa_power_{cairo,alexandria,aswan}_2024.csv` (new) — NASA POWER API, same grid cells and parameters, downloaded 2026-11-13.
+- `tests/test_checkpoint7_8.py` (new, 10 tests). `requirements.txt` pinned. `README.md` test badge 71/71.
+
+### 14.12 Still not done (deliberately)
+- **GPM IMERG cross-check of the 2015 rainfall jump** — needs an Earthdata login and a new data pipeline; stays as future work and is stated on the Rainfall page.
+- **Extending the analysis record to 2024** — the 1981–2023 record is kept frozen so every number in the docs stays valid; 2024 is used only as an independent test set.

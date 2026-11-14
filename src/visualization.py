@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 # NASA-inspired palette tuned for the dark "space" theme (.streamlit/config.toml).
 # Colors are brightened so they keep contrast on the #070D1C page / #0F1B33 card background.
@@ -593,4 +594,583 @@ def plot_monthly_extreme_trends(by_month_tmax: pd.DataFrame, by_month_tmin: pd.D
     fig.add_hline(y=0.0, line_width=1.2, line_color=REF_LINE_COLOR)
     fig = _apply_scientific_theme(fig, "Which Months Are Warming?", "Month", "°C per decade (Sen's slope)")
     fig.update_layout(barmode="group", hovermode="closest", legend={"orientation": "h", "yanchor": "top", "y": -0.18, "xanchor": "left", "x": 0.0}, margin={"b": 90})
+    return fig
+
+
+# ==============================================================================
+# SECTION: CLIMATE ANOMALY & SPI VISUALIZATIONS
+# ==============================================================================
+
+def plot_standardized_anomalies_zscore(
+    anomaly_df: pd.DataFrame,
+    variable_name: str,
+    location_name: str,
+) -> go.Figure:
+    """
+    Renders standardized Z-score anomalies with WMO sigma threshold bands:
+    ±1.0σ (Moderate), ±2.0σ (Severe), ±3.0σ (Extreme).
+    """
+    df = anomaly_df.dropna(subset=["z_score"]).copy()
+    if "date" in df.columns:
+        x_col = df["date"]
+    elif "date_str" in df.columns:
+        x_col = df["date_str"]
+    else:
+        x_col = df.apply(lambda r: f"{int(r['year'])}-{int(r['month']):02d}", axis=1)
+
+    colors = []
+    for z in df["z_score"]:
+        if z >= 3.0:
+            colors.append("#8B0000")  # Extreme Warm
+        elif z >= 2.0:
+            colors.append("#DC143C")  # Severe Warm
+        elif z >= 1.0:
+            colors.append("#FF7F50")  # Moderate Warm
+        elif z <= -3.0:
+            colors.append("#00008B")  # Extreme Cold
+        elif z <= -2.0:
+            colors.append("#4169E1")  # Severe Cold
+        elif z <= -1.0:
+            colors.append("#6495ED")  # Moderate Cold
+        else:
+            colors.append("#708090")  # Near Normal
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Bar(
+            x=x_col,
+            y=df["z_score"],
+            marker_color=colors,
+            name="Z-Score Anomaly",
+            hovertemplate="<b>Date</b>: %{x}<br><b>Z-Score</b>: %{y:+.2f}σ<br><b>Classification</b>: %{customdata}<extra></extra>",
+            customdata=df.get("classification", [""] * len(df)),
+        )
+    )
+
+    # Add reference threshold lines
+    fig.add_hline(y=0.0, line_width=1.2, line_color=REF_LINE_COLOR)
+    fig.add_hline(y=2.0, line_dash="dash", line_color="#FF5A3C", annotation_text="+2.0σ Severe Warm", annotation_position="top right", annotation_font_color="#FF5A3C")
+    fig.add_hline(y=-2.0, line_dash="dash", line_color="#5DA9E9", annotation_text="-2.0σ Severe Cold", annotation_position="bottom right", annotation_font_color="#5DA9E9")
+    fig.add_hline(y=3.0, line_dash="dot", line_color="#8B0000", annotation_text="+3.0σ Extreme Warm", annotation_position="top right", annotation_font_color="#8B0000")
+    fig.add_hline(y=-3.0, line_dash="dot", line_color="#00008B", annotation_text="-3.0σ Extreme Cold", annotation_position="bottom right", annotation_font_color="#00008B")
+
+    title = f"Standardized Monthly {variable_name} Anomalies (Z-Score) — {location_name}"
+    return _apply_scientific_theme(fig, title, "Date", "Standardized Anomaly (Z-Score σ)")
+
+
+def plot_spi_series(
+    spi_df: pd.DataFrame,
+    scale: int,
+    location_name: str,
+) -> go.Figure:
+    """
+    Renders the Standardized Precipitation Index (SPI) timeseries with WMO drought threshold bands.
+    """
+    spi_col = f"SPI_{scale}"
+    sub = spi_df.dropna(subset=[spi_col]).copy()
+    if sub.empty:
+        fig = go.Figure()
+        return _apply_scientific_theme(fig, f"SPI-{scale} Undefined (Hyper-Arid Regime) — {location_name}", "Date", f"SPI-{scale}")
+
+    if "date" in sub.columns:
+        x_col = sub["date"]
+    elif "date_str" in sub.columns:
+        x_col = sub["date_str"]
+    else:
+        x_col = sub.apply(lambda r: f"{int(r['year'])}-{int(r['month']):02d}", axis=1)
+
+    colors = []
+    for val in sub[spi_col]:
+        if val >= 2.0:
+            colors.append("#08306b")  # Extremely Wet
+        elif val >= 1.5:
+            colors.append("#2171b5")  # Very Wet
+        elif val >= 1.0:
+            colors.append("#6baed6")  # Moderately Wet
+        elif val <= -2.0:
+            colors.append("#a63603")  # Extremely Dry
+        elif val <= -1.5:
+            colors.append("#e6550d")  # Severely Dry
+        elif val <= -1.0:
+            colors.append("#fd8d3c")  # Moderately Dry
+        else:
+            colors.append("#708090")  # Near Normal
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Bar(
+            x=x_col,
+            y=sub[spi_col],
+            marker_color=colors,
+            name=f"SPI-{scale}",
+            hovertemplate="<b>Date</b>: %{x}<br><b>SPI-" + str(scale) + "</b>: %{y:+.2f}<br><b>Category</b>: %{customdata}<extra></extra>",
+            customdata=sub.get(f"SPI_{scale}_category", [""] * len(sub)),
+        )
+    )
+
+    fig.add_hline(y=0.0, line_width=1.2, line_color=REF_LINE_COLOR)
+    fig.add_hline(y=-1.5, line_dash="dash", line_color="#e6550d", annotation_text="-1.5 Severely Dry", annotation_position="bottom right", annotation_font_color="#e6550d")
+    fig.add_hline(y=-2.0, line_dash="dot", line_color="#a63603", annotation_text="-2.0 Extremely Dry", annotation_position="bottom right", annotation_font_color="#a63603")
+    fig.add_hline(y=+1.5, line_dash="dash", line_color="#2171b5", annotation_text="+1.5 Very Wet", annotation_position="top right", annotation_font_color="#2171b5")
+    fig.add_hline(y=+2.0, line_dash="dot", line_color="#08306b", annotation_text="+2.0 Extremely Wet", annotation_position="top right", annotation_font_color="#08306b")
+
+    title = f"Standardized Precipitation Index (SPI-{scale}) — {location_name}"
+    return _apply_scientific_theme(fig, title, "Date", f"SPI-{scale} Value")
+
+
+def plot_compound_scatter(
+    compound_df: pd.DataFrame,
+    location_name: str,
+) -> go.Figure:
+    """
+    Renders 2D quadrant scatter plot of Temperature Anomaly (Z-Score) vs Precipitation (Percent of Normal).
+    """
+    df = compound_df.dropna(subset=["t_z_score", "p_percent_normal"]).copy()
+    color_map = {
+        "Compound Hot & Dry": "#FF5A3C",
+        "Compound Hot & Wet": "#FFB703",
+        "Compound Cold & Dry": "#7CC4FF",
+        "Compound Cold & Wet": "#2EC4B6",
+        "Near Normal": "#708090",
+    }
+    colors = [color_map.get(cat, "#708090") for cat in df["compound_category"]]
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=df["t_z_score"],
+            y=df["p_percent_normal"],
+            mode="markers",
+            marker={"size": 7, "color": colors, "opacity": 0.8},
+            text=df["date_str"],
+            customdata=df["compound_category"],
+            hovertemplate="<b>Date</b>: %{text}<br><b>Temp Z</b>: %{x:+.2f}σ<br><b>Precip Norm</b>: %{y:.1f}%<br><b>Category</b>: %{customdata}<extra></extra>",
+        )
+    )
+
+    # Quadrant lines
+    fig.add_vline(x=0.0, line_width=1.2, line_dash="dot", line_color=REF_LINE_COLOR)
+    fig.add_hline(y=100.0, line_width=1.2, line_dash="dot", line_color=REF_LINE_COLOR)
+
+    title = f"Compound Climate Anomalies: Temperature Z vs. Precipitation Normal — {location_name}"
+    fig = _apply_scientific_theme(fig, title, "Temperature Standardized Anomaly (Z-Score σ)", "Precipitation (% of 1981–2010 Normal)")
+    return fig
+
+
+def plot_lagged_cross_correlation(
+    cross_corr_dict: Dict[str, Any],
+    location_name: str,
+) -> go.Figure:
+    """
+    Renders lagged cross-correlation between precipitation and temperature anomalies
+    with Bartlett 95% white noise bounds.
+    """
+    lags_data = cross_corr_dict.get("lagged_cross_correlations", [])
+    if not lags_data:
+        fig = go.Figure()
+        return _apply_scientific_theme(fig, f"Lagged Cross-Correlation — {location_name}", "Lag (months)", "Correlation (r)")
+
+    lags = [item["lag"] for item in lags_data]
+    corrs = [item["correlation"] for item in lags_data]
+    descriptions = [item["relationship"] for item in lags_data]
+    crit = cross_corr_dict.get("bartlett_critical_bound", 0.086)
+
+    colors = np.where(np.abs(corrs) >= crit, "#FF5A3C", "#708090")
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Bar(
+            x=lags,
+            y=corrs,
+            marker_color=colors,
+            name="Cross-Correlation r",
+            hovertemplate="<b>Lag %{x} months</b> (%{customdata})<br>Correlation: %{y:+.3f}<extra></extra>",
+            customdata=descriptions,
+        )
+    )
+
+    fig.add_hline(y=0.0, line_width=1.0, line_color=REF_LINE_COLOR)
+    fig.add_hline(y=crit, line_dash="dash", line_color="#FFB703", annotation_text="+95% Critical Bound", annotation_position="top right", annotation_font_color="#FFB703")
+    fig.add_hline(y=-crit, line_dash="dash", line_color="#FFB703", annotation_text="-95% Critical Bound", annotation_position="bottom right", annotation_font_color="#FFB703")
+
+    title = f"Lagged Cross-Correlation: Precip Anomaly leads Temp Anomaly — {location_name}"
+    fig = _apply_scientific_theme(fig, title, "Lag k (Months: k > 0 means Precip leads Temp)", "Pearson Correlation (r)")
+    return fig
+
+
+# ==============================================================================
+# FORECASTING & PREDICTIVE VISUALIZATIONS
+# ==============================================================================
+
+def plot_forecast_with_intervals(
+    historical_df: pd.DataFrame,
+    forecast_df: pd.DataFrame,
+    variable_name: str,
+    units: str,
+    location_name: str,
+    show_history_months: int = 60,
+    model_name: str = "Forecast",
+) -> go.Figure:
+    """
+    Renders 12-month forward predictive forecast with dual shaded prediction
+    envelopes (80% and 95%), WMO 1981-2010 normal curve, and historical context.
+    """
+    fig = go.Figure()
+
+    # Sliced history for context
+    hist_sub = historical_df.tail(show_history_months).copy()
+    val_col = "value" if "value" in hist_sub.columns else variable_name
+
+    # 1. Historical Observed Line
+    fig.add_trace(
+        go.Scatter(
+            x=hist_sub["date"],
+            y=hist_sub[val_col],
+            mode="lines+markers",
+            name="Observed History",
+            line={"color": "#94A3B8", "width": 2},
+            marker={"size": 4, "color": "#94A3B8"},
+            hovertemplate="<b>Observed %{x|%b %Y}</b><br>Value: %{y:.2f} " + units + "<extra></extra>",
+        )
+    )
+
+    # Historical climatological normal (if available)
+    if "clim_mean" in hist_sub.columns:
+        fig.add_trace(
+            go.Scatter(
+                x=hist_sub["date"],
+                y=hist_sub["clim_mean"],
+                mode="lines",
+                name="1981–2010 Baseline Mean",
+                line={"color": "rgba(148, 163, 184, 0.45)", "width": 1.2, "dash": "dot"},
+                hoverinfo="skip",
+            )
+        )
+
+    # 2. Climatological Normal for Forecast Period
+    if "clim_mean" in forecast_df.columns:
+        fig.add_trace(
+            go.Scatter(
+                x=forecast_df["date"],
+                y=forecast_df["clim_mean"],
+                mode="lines",
+                name="1981–2010 Baseline Normal",
+                line={"color": "rgba(255, 255, 255, 0.5)", "width": 1.5, "dash": "dot"},
+                hovertemplate="<b>WMO Normal %{x|%b %Y}</b><br>Baseline Mean: %{y:.2f} " + units + "<extra></extra>",
+            )
+        )
+
+    # Bridge connection between last historical point and first forecast point
+    last_hist_dt = hist_sub["date"].iloc[-1]
+    last_hist_val = hist_sub[val_col].iloc[-1]
+
+    # 3. 95% Prediction Interval Envelope (Upper then Lower reversed)
+    x_ci95 = [last_hist_dt] + list(forecast_df["date"]) + list(forecast_df["date"])[::-1] + [last_hist_dt]
+    y_ci95 = [last_hist_val] + list(forecast_df["ci_95_upper"]) + list(forecast_df["ci_95_lower"])[::-1] + [last_hist_val]
+    fig.add_trace(
+        go.Scatter(
+            x=x_ci95,
+            y=y_ci95,
+            fill="toself",
+            fillcolor="rgba(255, 215, 0, 0.10)",
+            line={"color": "rgba(255, 215, 0, 0.25)", "width": 1},
+            name="95% Prediction Interval",
+            hoverinfo="skip",
+        )
+    )
+
+    # 4. 80% Prediction Interval Envelope
+    x_ci80 = [last_hist_dt] + list(forecast_df["date"]) + list(forecast_df["date"])[::-1] + [last_hist_dt]
+    y_ci80 = [last_hist_val] + list(forecast_df["ci_80_upper"]) + list(forecast_df["ci_80_lower"])[::-1] + [last_hist_val]
+    fig.add_trace(
+        go.Scatter(
+            x=x_ci80,
+            y=y_ci80,
+            fill="toself",
+            fillcolor="rgba(255, 215, 0, 0.22)",
+            line={"color": "rgba(255, 215, 0, 0.45)", "width": 1},
+            name="80% Prediction Interval",
+            hoverinfo="skip",
+        )
+    )
+
+    # 5. Point Forecast Line
+    x_fc = [last_hist_dt] + list(forecast_df["date"])
+    y_fc = [last_hist_val] + list(forecast_df["forecast"])
+    fig.add_trace(
+        go.Scatter(
+            x=x_fc,
+            y=y_fc,
+            mode="lines+markers",
+            name=f"{model_name}",
+            line={"color": "#FFD700", "width": 2.8},
+            marker={"size": 6, "color": "#FFD700"},
+            hovertemplate="<b>Forecast %{x|%b %Y}</b><br>Projection: %{y:.2f} " + units + "<extra></extra>",
+        )
+    )
+
+    # Vertical dividing line between history and forecast
+    dt_str = last_hist_dt.strftime("%Y-%m-%d") if hasattr(last_hist_dt, "strftime") else str(last_hist_dt)
+    fig.add_vline(
+        x=dt_str,
+        line_width=1.5,
+        line_dash="dash",
+        line_color="#FC3D21",
+    )
+    fig.add_annotation(
+        x=dt_str,
+        yref="paper",
+        y=0.98,
+        text="Forecast Origin",
+        showarrow=False,
+        xanchor="right",
+        font={"color": "#FC3D21", "size": 11, "family": FONT_FAMILY},
+    )
+
+    title = f"12-Month Climate Projection & Prediction Intervals ({variable_name}) — {location_name}"
+    fig = _apply_scientific_theme(fig, title, "Date", f"{variable_name} ({units})")
+    # Six legend entries: place the legend below the plot so it does not cover the title
+    fig.update_layout(
+        legend={"orientation": "h", "yanchor": "top", "y": -0.16, "xanchor": "left", "x": 0.0},
+        margin={"b": 100},
+    )
+    return fig
+
+
+def plot_future_anomaly_bars(
+    future_df: pd.DataFrame,
+    variable_name: str,
+    units: str,
+    location_name: str,
+) -> go.Figure:
+    """
+    Renders bar chart of expected future departures relative to WMO 1981-2010 normal,
+    colored by standard IPCC/WMO severity bracket with 95% uncertainty whiskers.
+    """
+    fig = go.Figure()
+
+    # Calculate asymmetric error whisker lengths relative to point expected anomaly
+    err_plus = future_df["expected_anomaly_ci95_upper"] - future_df["expected_anomaly"]
+    err_minus = future_df["expected_anomaly"] - future_df["expected_anomaly_ci95_lower"]
+
+    fig.add_trace(
+        go.Bar(
+            x=future_df["date"].dt.strftime("%b %Y"),
+            y=future_df["expected_anomaly"],
+            marker_color=future_df["severity_color"],
+            error_y={
+                "type": "data",
+                "symmetric": False,
+                "array": err_plus,
+                "arrayminus": err_minus,
+                "color": "#F1F5F9",
+                "thickness": 1.2,
+                "width": 4,
+            },
+            name="Expected Anomaly",
+            customdata=np.stack((
+                future_df["expected_z_score"],
+                future_df["severity_bracket"],
+                future_df["expected_anomaly_ci95_lower"],
+                future_df["expected_anomaly_ci95_upper"],
+            ), axis=-1),
+            hovertemplate=(
+                "<b>%{x}</b><br>"
+                "Expected Departure: %{y:+.2f} " + units + "<br>"
+                "Standardized Z: %{customdata[0]:+.2f}σ<br>"
+                "Severity: %{customdata[1]}<br>"
+                "95% CI Range: [%{customdata[2]:+.2f}, %{customdata[3]:+.2f}] " + units +
+                "<extra></extra>"
+            ),
+        )
+    )
+
+    fig.add_hline(y=0.0, line_width=1.2, line_color=REF_LINE_COLOR)
+
+    title = f"Expected Future Climate Anomalies vs. WMO 1981–2010 Normal — {location_name}"
+    fig = _apply_scientific_theme(fig, title, "Forecast Month", f"Departure ({units})")
+    return fig
+
+
+def plot_model_backtest_comparison(
+    backtest_results: Dict[str, Any],
+    location_name: str = "Regional",
+) -> go.Figure:
+    """
+    Compares out-of-sample forecast accuracy (MAE, RMSE, MASE) across candidate models.
+    Highlights the tournament winner.
+    """
+    summary = backtest_results.get("summary_metrics", {})
+    if not summary:
+        fig = go.Figure()
+        return _apply_scientific_theme(fig, "Model Comparison", "Model", "Score")
+
+    model_names = [v["model_name"] for v in summary.values()]
+    maes = [v["mean_mae"] for v in summary.values()]
+    rmses = [v["mean_rmse"] for v in summary.values()]
+    mases = [v["mase"] for v in summary.values()]
+
+    fig = go.Figure()
+
+    fig.add_trace(
+        go.Bar(
+            name="MAE (Mean Absolute Error)",
+            x=model_names,
+            y=maes,
+            marker_color="#4C8DFF",
+            hovertemplate="<b>%{x}</b><br>MAE: %{y:.3f}<extra></extra>",
+        )
+    )
+
+    fig.add_trace(
+        go.Bar(
+            name="RMSE (Root Mean Squared Error)",
+            x=model_names,
+            y=rmses,
+            marker_color="#7CC4FF",
+            hovertemplate="<b>%{x}</b><br>RMSE: %{y:.3f}<extra></extra>",
+        )
+    )
+
+    fig.add_trace(
+        go.Bar(
+            name="MASE (vs Seasonal Naive)",
+            x=model_names,
+            y=mases,
+            marker_color="#FFB703",
+            hovertemplate="<b>%{x}</b><br>MASE: %{y:.3f} (Values < 1.0 beat naive)<extra></extra>",
+        )
+    )
+
+    # Reference line at MASE = 1.0 (benchmark equivalence)
+    fig.add_hline(
+        y=1.0,
+        line_dash="dot",
+        line_color="#FC3D21",
+        annotation_text="MASE = 1.0 (Seasonal Naive Parity)",
+        annotation_position="top right",
+        annotation_font_color="#FC3D21",
+    )
+
+    fig.update_layout(barmode="group")
+    title = f"Candidate Model Cross-Validation Tournament (Out-of-Sample Expanding Window) — {location_name}"
+    fig = _apply_scientific_theme(fig, title, "Forecasting Model", "Error Metric Value")
+    return fig
+
+
+def plot_forecast_residuals_diagnostic(
+    residuals: np.ndarray,
+    dates: Optional[pd.Series] = None,
+    model_name: str = "Selected Model",
+    location_name: str = "",
+) -> go.Figure:
+    """
+    Renders 2-panel diagnostic check of model in-sample residuals:
+    1. Residual time series (checking constant zero mean and absence of heteroscedasticity).
+    2. Residual histogram with Gaussian distribution overlay.
+    """
+    resid = np.asarray(residuals, dtype=float)
+    resid = resid[~np.isnan(resid)]
+
+    if len(resid) == 0:
+        fig = go.Figure()
+        return _apply_scientific_theme(fig, f"Residual Diagnostics — {model_name}", "Step", "Residual")
+
+    fig = make_subplots(
+        rows=1,
+        cols=2,
+        subplot_titles=(
+            f"Residual Time Series (Mean={np.mean(resid):+.3f})",
+            f"Residual Distribution (Std={np.std(resid):.3f})",
+        ),
+        column_widths=[0.62, 0.38],
+    )
+
+    # Panel 1: Residual time series
+    x_steps = dates.iloc[-len(resid):] if dates is not None and len(dates) >= len(resid) else list(range(len(resid)))
+    fig.add_trace(
+        go.Scatter(
+            x=x_steps,
+            y=resid,
+            mode="lines",
+            line={"color": "#4C8DFF", "width": 1.2},
+            name="Residuals",
+            hovertemplate="Residual: %{y:+.3f}<extra></extra>",
+        ),
+        row=1,
+        col=1,
+    )
+    fig.add_hline(y=0.0, line_dash="dash", line_color=REF_LINE_COLOR, row=1, col=1)
+
+    # Panel 2: Residual histogram
+    fig.add_trace(
+        go.Histogram(
+            y=resid,
+            nbinsy=24,
+            marker_color="rgba(124, 196, 255, 0.6)",
+            name="Residual Frequency",
+            orientation="h",
+            showlegend=False,
+            hovertemplate="Count: %{x}<br>Residual: %{y:.2f}<extra></extra>",
+        ),
+        row=1,
+        col=2,
+    )
+
+    title = f"Forecasting Residual Diagnostics: {model_name} — {location_name}"
+    fig = _apply_scientific_theme(fig, title, "", "")
+    return fig
+
+
+
+
+def plot_forecast_verification(
+    table: pd.DataFrame,
+    variable_name: str,
+    units: str,
+    location_name: str,
+) -> go.Figure:
+    """
+    Reality check: the 12-month forecast (made from data up to the previous year) with its
+    80 % / 95 % bands, overlaid with the observations NASA released afterwards.
+    Observed points inside the 95 % band are green, outside are red.
+    """
+    t = table.sort_values("date")
+    x = list(t["date"])
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=x + x[::-1], y=list(t["ci_95_upper"]) + list(t["ci_95_lower"])[::-1],
+        fill="toself", fillcolor="rgba(255, 215, 0, 0.10)", line={"color": "rgba(255, 215, 0, 0.25)", "width": 1},
+        name="95% band (forecast)", hoverinfo="skip",
+    ))
+    fig.add_trace(go.Scatter(
+        x=x + x[::-1], y=list(t["ci_80_upper"]) + list(t["ci_80_lower"])[::-1],
+        fill="toself", fillcolor="rgba(255, 215, 0, 0.22)", line={"color": "rgba(255, 215, 0, 0.45)", "width": 1},
+        name="80% band (forecast)", hoverinfo="skip",
+    ))
+    fig.add_trace(go.Scatter(
+        x=x, y=t["clim_mean"], mode="lines", name="1981–2010 normal",
+        line={"color": "rgba(255, 255, 255, 0.5)", "width": 1.5, "dash": "dot"},
+        hovertemplate="Normal %{x|%b %Y}: %{y:.2f} " + units + "<extra></extra>",
+    ))
+    fig.add_trace(go.Scatter(
+        x=x, y=t["forecast"], mode="lines+markers", name="Forecast (made before the year started)",
+        line={"color": "#FFD700", "width": 2.6}, marker={"size": 6, "color": "#FFD700"},
+        hovertemplate="Forecast %{x|%b %Y}: %{y:.2f} " + units + "<extra></extra>",
+    ))
+    colors = ["#34D399" if ok else "#FF5A3C" for ok in t["in_95"]]
+    fig.add_trace(go.Scatter(
+        x=x, y=t["observed"], mode="markers", name="What NASA actually observed",
+        marker={"size": 11, "color": colors, "symbol": "diamond", "line": {"color": "#FFFFFF", "width": 1.2}},
+        hovertemplate="Observed %{x|%b %Y}: %{y:.2f} " + units + "<extra></extra>",
+    ))
+    period = f"{t['date'].min():%Y}" if t["date"].min().year == t["date"].max().year else f"{t['date'].min():%b %Y}–{t['date'].max():%b %Y}"
+    fig = _apply_scientific_theme(
+        fig, f"Reality Check — Forecast vs Observed {period} ({variable_name}) — {location_name}",
+        "Month", f"{variable_name} ({units})",
+    )
+    fig.update_layout(
+        legend={"orientation": "h", "yanchor": "top", "y": -0.16, "xanchor": "left", "x": 0.0},
+        margin={"b": 100},
+    )
     return fig

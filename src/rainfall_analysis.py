@@ -227,6 +227,8 @@ def pettitt_change_point_test(
     values: np.ndarray,
     years: np.ndarray,
     alpha: float = 0.05,
+    n_perms: Optional[int] = None,
+    seed: Optional[int] = 42,
 ) -> Dict[str, Any]:
     """
     Pettitt (1979) non-parametric test for a single abrupt shift (change point).
@@ -237,11 +239,22 @@ def pettitt_change_point_test(
 
         U_t = sum_{i<=t} sum_{j>t} sgn(x_i - x_j),   t = 1..n-1
         K   = max_t |U_t|
-        p  ~= 2 * exp(-6 K^2 / (n^3 + n^2))          (approximation, capped at 1)
+        p  ~= 2 * exp(-6 K^2 / (n^3 + n^2))          (asymptotic approximation, capped at 1)
 
-    The change point is the last year of the first segment; the new regime starts
-    the following year. The test detects WHEN a shift happened, not WHY (a real
-    climate shift and a change in the data source look the same).
+    Standardized terminology:
+    - change_year: final year of the pre-change regime (index t_idx).
+    - new_regime_start: first year of the post-change regime (index t_idx + 1).
+
+    Scientific attribution note:
+    The test detects WHEN a statistical break occurred in the time series, NOT WHY.
+    A detected statistical change in the MERRA-2 precipitation series must NOT be
+    attributed conclusively to climate change, GPM/TRMM observing-system transitions,
+    or satellite assimilation artifacts without independent ground-station validation.
+
+    Permutation qualification note:
+    Monte Carlo permutations evaluate significance under the null hypothesis of exchangeable
+    observations. If serial correlation is present, exchangeability is violated and block
+    permutation or pre-whitening is required.
     """
     y = np.asarray(values, dtype=float)
     x = np.asarray(years)
@@ -257,6 +270,21 @@ def pettitt_change_point_test(
     k_stat = float(np.abs(u[t_idx]))
     p_val = float(min(1.0, 2.0 * np.exp(-6.0 * k_stat ** 2 / (n ** 3 + n ** 2))))
 
+    # Optional Monte Carlo permutation test
+    p_perm: Optional[float] = None
+    if n_perms is not None and n_perms > 0:
+        rng = np.random.default_rng(seed)
+        ranks = pd.Series(y).rank().values
+        t_range = np.arange(1, n)
+        count_exceed = 0
+        for _ in range(n_perms):
+            p_ranks = rng.permutation(ranks)
+            w = np.cumsum(p_ranks)[:-1]
+            u_perm = 2.0 * w - t_range * (n + 1)
+            if np.max(np.abs(u_perm)) >= k_stat:
+                count_exceed += 1
+        p_perm = float(count_exceed / n_perms)
+
     before, after = y[: t_idx + 1], y[t_idx + 1 :]
     mean_before, mean_after = float(np.mean(before)), float(np.mean(after))
     is_sig = bool(p_val < alpha)
@@ -271,12 +299,13 @@ def pettitt_change_point_test(
     else:
         interpretation = f"No significant abrupt shift detected (most likely break {int(x[t_idx + 1])}, p = {p_val:.3f})."
 
-    return {
+    out_dict: Dict[str, Any] = {
         "test_name": "Pettitt Change-Point Test",
         "change_year": int(x[t_idx]),
         "new_regime_start": int(x[t_idx + 1]),
         "k_statistic": k_stat,
         "p_value": p_val,
+        "p_permutation": p_perm,
         "is_significant": is_sig,
         "direction": direction,
         "mean_before": mean_before,
@@ -287,6 +316,7 @@ def pettitt_change_point_test(
         "u_series": u,
         "interpretation": interpretation,
     }
+    return out_dict
 
 
 def analyze_rainfall(df: pd.DataFrame, location_name: str, alpha: float = 0.05) -> Dict[str, Any]:

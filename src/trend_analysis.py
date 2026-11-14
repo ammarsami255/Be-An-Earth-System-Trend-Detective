@@ -123,7 +123,28 @@ def hamed_rao_modified_mann_kendall(
     """
     Computes the Hamed & Rao (1998) Modified Mann-Kendall test.
     Corrects the variance of S (var_s) for statistically significant serial autocorrelation
-    in the detrended ranks of the series.
+    in the detrended ranks of the series:
+    
+        Var*(S) = Var(S) * eta, where eta = n / n* = 1 + (2 / (n(n-1)(n-2))) * sum((n-i)(n-i-1)(n-i-2) * rho_i)
+        
+    for all lags i where |rho_i| > Z_{1-alpha/2} / sqrt(n).
+    
+    IMPORTANT SENSITIVITY & INFERENTIAL NOTES:
+    - Variance Inflation vs Deflation:
+      When serial correlation is positive (rho_i > 0), eta > 1, inflating variance and deflating |Z*|
+      (reducing false positives from persistence).
+      Conversely, when significant negative autocorrelation is present (rho_i < 0), eta < 1, deflating
+      variance and increasing |Z*|. For example, in Alexandria annual T2M (n=43), lag-12 rank autocorrelation
+      is significantly negative (rho_{12} = -0.30129 vs critical bound 0.29889), yielding eta = 0.780520,
+      which increases |Z*| to 6.23 compared to original MK Z = 5.50.
+    - Sensitivity to Lag Selection:
+      Because all lags up to n-1 are scanned, high-order empirical autocorrelations (e.g. lag 12 in an n=43
+      annual series) can cross the critical threshold by chance or due to multi-year quasi-periodicities.
+    - Complementary Inferential Roles:
+      Original Mann-Kendall and Hamed-Rao modified Mann-Kendall address related but distinct inferential
+      questions (pure i.i.d. null vs AR-corrected null). Neither test is universally conservative across all
+      autocorrelation structures. In the dashboard, both statistics are presented side by side.
+    
     Provides complete intermediate calculation diagnostics.
     """
     y = np.asarray(data, dtype=float)
@@ -730,3 +751,90 @@ def compare_temperature_extremes(
                 "is_significant": bool(mk["is_significant"] and hr["is_significant"]),
             })
     return pd.DataFrame(rows)
+
+
+def compare_regional_warming_rates(
+    dfs: Dict[str, pd.DataFrame],
+    variable: str = "T2M",
+    alpha: float = 0.05,
+) -> pd.DataFrame:
+    """
+    Tests whether two regions warm at DIFFERENT rates (H0: beta_A - beta_B = 0).
+
+    Method — paired difference series:
+        d_t = annual_A(t) - annual_B(t)
+    The trend of d_t is exactly beta_A - beta_B, and because both regions share the same
+    year-to-year weather (they are strongly correlated), differencing removes that common
+    noise. Testing two separate slopes as if they were independent would overstate the
+    uncertainty and ignore this correlation.
+
+    Each pair is tested twice, in keeping with the rest of the project:
+      * parametric   — OLS slope of d_t with Newey-West (HAC, 2 lags) standard errors;
+      * non-parametric — Mann-Kendall + Hamed-Rao on d_t, with Sen's slope.
+    A difference is called significant only if BOTH agree AND it survives Holm
+    correction across all pairs (family-wise error control).
+    """
+    import statsmodels.api as sm
+
+    annual: Dict[str, pd.Series] = {}
+    for region, df in dfs.items():
+        sub = df[df["variable"] == variable].dropna(subset=["value"])
+        if sub.empty:
+            continue
+        grp = sub.groupby("year")["value"]
+        annual[region] = grp.mean()[grp.count() == 12]
+
+    regions = list(annual.keys())
+    rows: List[Dict[str, Any]] = []
+    for i in range(len(regions)):
+        for j in range(i + 1, len(regions)):
+            a, b = regions[i], regions[j]
+            joined = pd.concat([annual[a], annual[b]], axis=1, join="inner").dropna()
+            if len(joined) < 10:
+                continue
+            years = joined.index.values.astype(float)
+            d = (joined.iloc[:, 0] - joined.iloc[:, 1]).values.astype(float)
+            sen_a = compute_sens_slope(joined.iloc[:, 0].values.astype(float), years, alpha=alpha)["slope"]
+            sen_b = compute_sens_slope(joined.iloc[:, 1].values.astype(float), years, alpha=alpha)["slope"]
+            X = sm.add_constant(years - years.mean())
+            ols = sm.OLS(d, X).fit(cov_type="HAC", cov_kwds={"maxlags": 2})
+            # order each pair so the reported difference is positive ("faster minus slower")
+            if ols.params[1] < 0:
+                a, b, d, sen_a, sen_b = b, a, -d, sen_b, sen_a
+                ols = sm.OLS(d, X).fit(cov_type="HAC", cov_kwds={"maxlags": 2})
+            ci = ols.conf_int(alpha=alpha)[1]
+            mk = mann_kendall_test(d, alpha=alpha)
+            hr = hamed_rao_modified_mann_kendall(d, alpha=alpha)
+            sen_d = compute_sens_slope(d, years, alpha=alpha)
+            rows.append({
+                "faster_region": a,
+                "slower_region": b,
+                "faster_rate_per_decade": float(sen_a) * 10.0,
+                "slower_rate_per_decade": float(sen_b) * 10.0,
+                "difference_per_decade": float(ols.params[1]) * 10.0,
+                "diff_ci_lower_per_decade": float(ci[0]) * 10.0,
+                "diff_ci_upper_per_decade": float(ci[1]) * 10.0,
+                "sen_difference_per_decade": float(sen_d["slope"]) * 10.0,
+                "ols_hac_p": float(ols.pvalues[1]),
+                "mk_p": float(mk["p_value"]),
+                "hr_p": float(hr["p_value"]),
+                "n_years": int(len(d)),
+            })
+
+    res = pd.DataFrame(rows)
+    if res.empty:
+        return res
+    # Holm step-down on the larger (more conservative) of the parametric / HR p-values
+    p_used = np.maximum(res["ols_hac_p"].values, res["hr_p"].values)
+    order = np.argsort(p_used)
+    m = len(p_used)
+    holm = np.empty(m)
+    running = 0.0
+    for rank, idx in enumerate(order):
+        running = max(running, min(1.0, (m - rank) * p_used[idx]))
+        holm[idx] = running
+    res["holm_p"] = holm
+    res["is_significant"] = (
+        (res["ols_hac_p"] < alpha) & (res["hr_p"] < alpha) & (res["holm_p"] < alpha)
+    )
+    return res.sort_values("holm_p").reset_index(drop=True)
