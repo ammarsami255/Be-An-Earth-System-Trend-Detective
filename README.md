@@ -35,7 +35,7 @@ EarthTrend Explorer is a scientifically rigorous interactive data-analysis web a
 Rather than acting as a cosmetic dashboard with hardcoded or fabricated values, EarthTrend Explorer is a true **statistical laboratory** built to answer four fundamental scientific questions:
 
 1. **What is changing?**  
-   Identifies and validates physical environmental variables (e.g., 2-meter air temperature `T2M`, daily maximum/minimum temperatures `T2M_MAX`/`T2M_MIN`, and corrected precipitation `PRECTOTCORR`), ensuring unit consistency, boundary checks, and transparent data quality auditing.
+   Identifies and validates physical environmental variables (e.g., 2-meter air temperature `T2M`, monthly extreme maximum/minimum temperatures `T2M_MAX`/`T2M_MIN` (hottest/coldest value reached within each month), and corrected precipitation `PRECTOTCORR`), ensuring unit consistency, boundary checks, and transparent data quality auditing.
 
 2. **Where is it changing?**  
    Locates the exact geographic domain, coordinates, and regional elevation context (e.g., Greater Cairo urban basin, Alexandria Mediterranean coastline, and Aswan hyper-arid desert).

@@ -19,17 +19,21 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-# NASA color palette standards
-NASA_BLUE = "#0B3D91"
-NASA_RED = "#FC3D21"
-NASA_LIGHT_BLUE = "#4895EF"
-NASA_DARK_NAVY = "#031B4D"
-NEUTRAL_BG = "#F8F9FA"
-CARD_BG = "#FFFFFF"
-TEXT_COLOR = "#1E293B"
-GRID_COLOR = "#E2E8F0"
-WARM_COLOR = "#E63946"
-COLD_COLOR = "#1D3557"
+# NASA-inspired palette tuned for the dark "space" theme (.streamlit/config.toml).
+# Colors are brightened so they keep contrast on the #070D1C page / #0F1B33 card background.
+NASA_BLUE = "#4C8DFF"
+NASA_RED = "#FF5A3C"
+NASA_LIGHT_BLUE = "#7CC4FF"
+NASA_DARK_NAVY = "#F1F5F9"  # used for titles and trend lines -> near-white on dark
+NEUTRAL_BG = "#070D1C"
+CARD_BG = "#0F1B33"
+TEXT_COLOR = "#CBD5E1"
+GRID_COLOR = "rgba(148, 163, 184, 0.14)"
+AXIS_LINE_COLOR = "rgba(148, 163, 184, 0.35)"
+REF_LINE_COLOR = "#94A3B8"
+WARM_COLOR = "#FF5A3C"
+COLD_COLOR = "#5DA9E9"
+FONT_FAMILY = "Inter, Segoe UI, sans-serif"
 
 
 def _apply_scientific_theme(fig: go.Figure, title: str, x_title: str, y_title: str) -> go.Figure:
@@ -39,32 +43,36 @@ def _apply_scientific_theme(fig: go.Figure, title: str, x_title: str, y_title: s
             "text": f"<b>{title}</b>",
             "x": 0.02,
             "xanchor": "left",
-            "font": {"family": "Inter, Segoe UI, sans-serif", "size": 17, "color": NASA_DARK_NAVY},
+            "font": {"family": FONT_FAMILY, "size": 17, "color": NASA_DARK_NAVY},
         },
         xaxis={
             "title": {"text": x_title, "font": {"size": 13, "color": TEXT_COLOR}},
             "gridcolor": GRID_COLOR,
             "showline": True,
-            "linecolor": "#CBD5E1",
+            "linecolor": AXIS_LINE_COLOR,
             "zeroline": False,
+            "tickfont": {"color": TEXT_COLOR},
         },
         yaxis={
             "title": {"text": y_title, "font": {"size": 13, "color": TEXT_COLOR}},
             "gridcolor": GRID_COLOR,
             "showline": True,
-            "linecolor": "#CBD5E1",
+            "linecolor": AXIS_LINE_COLOR,
             "zeroline": False,
+            "tickfont": {"color": TEXT_COLOR},
         },
-        plot_bgcolor="#FFFFFF",
-        paper_bgcolor="#FFFFFF",
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor=CARD_BG,
+        font={"family": FONT_FAMILY, "color": TEXT_COLOR},
+        hoverlabel={"bgcolor": "#13213D", "bordercolor": "#2B3B5C", "font": {"color": "#F1F5F9", "family": FONT_FAMILY}},
         legend={
             "orientation": "h",
             "yanchor": "bottom",
             "y": 1.02,
             "xanchor": "right",
             "x": 1.0,
-            "font": {"size": 11},
-            "bgcolor": "rgba(255,255,255,0.8)",
+            "font": {"size": 11, "color": TEXT_COLOR},
+            "bgcolor": "rgba(0,0,0,0)",
         },
         margin={"l": 55, "r": 35, "t": 60, "b": 50},
         hovermode="x unified",
@@ -99,8 +107,8 @@ def plot_timeseries_with_trend(
             y=clean_df[value_col],
             mode=mode_str,
             name=f"Observed ({variable_name})",
-            line={"color": "#3A86FF", "width": 1.6},
-            marker={"size": 4, "color": "#0B3D91", "opacity": 0.7},
+            line={"color": "#5B9BFF", "width": 1.6},
+            marker={"size": 4, "color": NASA_BLUE, "opacity": 0.8},
             hovertemplate="<b>Date</b>: %{x|%Y-%m}<br><b>Value</b>: %{y:.2f} " + units + "<extra></extra>",
         )
     )
@@ -211,12 +219,13 @@ def plot_climatology_heatmap(
             "text": f"<b>Climatology Matrix (Year vs Month) — {location_name}</b>",
             "x": 0.02,
             "xanchor": "left",
-            "font": {"family": "Inter, Segoe UI, sans-serif", "size": 17, "color": NASA_DARK_NAVY},
+            "font": {"family": FONT_FAMILY, "size": 17, "color": NASA_DARK_NAVY},
         },
         xaxis={"title": "Month", "tickmode": "array", "tickvals": month_labels},
         yaxis={"title": "Year", "autorange": "reversed"},
-        plot_bgcolor="#FFFFFF",
-        paper_bgcolor="#FFFFFF",
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor=CARD_BG,
+        font={"family": FONT_FAMILY, "color": TEXT_COLOR},
         margin={"l": 55, "r": 35, "t": 60, "b": 50},
     )
     return fig
@@ -247,7 +256,7 @@ def plot_anomaly_bars(
     )
 
     # Add zero reference line
-    fig.add_hline(y=0.0, line_width=1.5, line_color="#334155")
+    fig.add_hline(y=0.0, line_width=1.5, line_color=REF_LINE_COLOR)
 
     title = f"Monthly {variable_name} Anomalies (Rel. to {baseline_str} Normal) — {location_name}"
     return _apply_scientific_theme(fig, title, "Date", f"Anomaly ({units})")
@@ -264,7 +273,7 @@ def plot_regional_comparison(
     Renders multi-region overlay comparison (e.g. Greater Cairo vs Alexandria vs Aswan).
     """
     fig = go.Figure()
-    palette = ["#0B3D91", "#E63946", "#2A9D8F", "#F4A261", "#9B5DE5"]
+    palette = ["#4C8DFF", "#FF5A3C", "#2EC4B6", "#F4A261", "#B388FF"]
 
     for idx, (loc_name, df_loc) in enumerate(dfs_dict.items()):
         clean_loc = df_loc.dropna(subset=[value_col, time_col]).sort_values(by=time_col)
@@ -297,7 +306,7 @@ def plot_autocorrelation_acf(acf_info: Dict[str, Any]) -> go.Figure:
     # Shaded confidence band for white noise
     fig.add_hline(y=ci, line_dash="dash", line_color="#94A3B8", annotation_text="+95% White Noise Bound")
     fig.add_hline(y=-ci, line_dash="dash", line_color="#94A3B8", annotation_text="-95% White Noise Bound")
-    fig.add_hline(y=0.0, line_color="#475569")
+    fig.add_hline(y=0.0, line_color=REF_LINE_COLOR)
 
     # Raw ACF Lollipops and Markers
     for lag, val in zip(lags, acf_vals):
@@ -369,3 +378,219 @@ def plot_decadal_shift_bars(decadal_df: pd.DataFrame) -> go.Figure:
     fig.update_layout(barmode="group")
     title = "Decadal Frequency Shift of Extreme Months"
     return _apply_scientific_theme(fig, title, "Decade", "Percentage of Months (%)")
+
+
+def plot_rainfall_annual_totals(
+    annual_df: pd.DataFrame,
+    trend: Dict[str, Any],
+    normal_mm: float,
+    location_name: str,
+    x_col: str = "year",
+    value_col: str = "total_mm",
+    title_prefix: str = "Annual Rainfall Totals",
+    change_point: Optional[Dict[str, Any]] = None,
+) -> go.Figure:
+    """
+    Bar chart of yearly rainfall totals (blue = above the 1981–2010 normal, tan = below),
+    with the 1981–2010 normal as a dashed line and Sen's slope trend line.
+    If a significant Pettitt `change_point` is given, the mean level before and after
+    the shift is drawn as a step line.
+    """
+    df = annual_df.dropna(subset=[value_col]).sort_values(by=x_col)
+    above = df[value_col] >= normal_mm
+    colors = np.where(above, NASA_LIGHT_BLUE, "#C9A26B")
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Bar(
+            x=df[x_col],
+            y=df[value_col],
+            marker_color=colors,
+            name="Rainfall total",
+            hovertemplate="<b>%{x}</b>: %{y:.1f} mm<extra></extra>",
+        )
+    )
+    fig.add_hline(
+        y=normal_mm,
+        line_dash="dash",
+        line_color=REF_LINE_COLOR,
+        annotation_text=f"1981–2010 normal: {normal_mm:.1f} mm",
+        annotation_position="top left",
+    )
+    x_vals = df[x_col].astype(float).values
+    trend_y = trend["sen_intercept"] + trend["sen_slope_per_year"] * x_vals
+    fig.add_trace(
+        go.Scatter(
+            x=df[x_col],
+            y=trend_y,
+            mode="lines",
+            name=f"Sen's slope ({trend['sen_slope_per_decade']:+.2f} mm/decade)",
+            line={"color": NASA_RED, "width": 2.5},
+            hoverinfo="skip",
+        )
+    )
+    if change_point is not None and change_point.get("is_significant"):
+        cp_year = change_point["new_regime_start"]
+        first, last = float(df[x_col].min()), float(df[x_col].max())
+        fig.add_trace(
+            go.Scatter(
+                x=[first, cp_year - 0.5, cp_year - 0.5, last],
+                y=[change_point["mean_before"], change_point["mean_before"], change_point["mean_after"], change_point["mean_after"]],
+                mode="lines",
+                name=f"Pettitt shift in {cp_year} (mean before → after)",
+                line={"color": "#C084FC", "width": 2.5, "dash": "dot"},
+                hoverinfo="skip",
+            )
+        )
+    title = f"{title_prefix} — {location_name}"
+    fig = _apply_scientific_theme(fig, title, "Year", "Rainfall (mm)")
+    # Several long legend entries: place the legend below the plot so it does not cover the title
+    fig.update_layout(legend={"orientation": "h", "yanchor": "top", "y": -0.18, "xanchor": "left", "x": 0.0}, margin={"b": 90})
+    return fig
+
+
+def plot_rainfall_monthly_climatology(clim_df: pd.DataFrame, location_name: str) -> go.Figure:
+    """Average rainfall per calendar month (bars) and how often each month is wet (line)."""
+    fig = go.Figure()
+    fig.add_trace(
+        go.Bar(
+            x=clim_df["month_name"],
+            y=clim_df["mean_mm"],
+            marker_color=NASA_BLUE,
+            name="Mean rainfall (mm/month)",
+            hovertemplate="<b>%{x}</b>: %{y:.1f} mm<extra></extra>",
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=clim_df["month_name"],
+            y=clim_df["wet_fraction"] * 100.0,
+            mode="lines+markers",
+            name="Years with ≥ 1 mm (%)",
+            yaxis="y2",
+            line={"color": "#2EC4B6", "width": 2.0},
+            hovertemplate="<b>%{x}</b>: wet in %{y:.0f}% of years<extra></extra>",
+        )
+    )
+    fig = _apply_scientific_theme(fig, f"When Does It Rain? Monthly Rainfall Climatology — {location_name}", "Month", "Mean rainfall (mm/month)")
+    fig.update_layout(
+        yaxis2={
+            "title": {"text": "Years with rain (%)"},
+            "overlaying": "y",
+            "side": "right",
+            "range": [0, 105],
+            "showgrid": False,
+        }
+    )
+    return fig
+
+
+def plot_regional_rainfall(annual_by_region: Dict[str, pd.DataFrame]) -> go.Figure:
+    """Overlay of yearly rainfall totals for several regions."""
+    fig = go.Figure()
+    palette = ["#4C8DFF", "#FF5A3C", "#2EC4B6", "#F4A261", "#B388FF"]
+    for idx, (name, df) in enumerate(annual_by_region.items()):
+        fig.add_trace(
+            go.Scatter(
+                x=df["year"],
+                y=df["total_mm"],
+                mode="lines+markers",
+                name=name,
+                line={"color": palette[idx % len(palette)], "width": 2.0},
+                marker={"size": 4},
+                hovertemplate=f"<b>{name}</b> %{{x}}: %{{y:.1f}} mm<extra></extra>",
+            )
+        )
+    return _apply_scientific_theme(fig, "Annual Rainfall Totals by Region", "Year", "Rainfall (mm/year)")
+
+
+def plot_temperature_extremes_comparison(comp_df: pd.DataFrame) -> go.Figure:
+    """Grouped bars: warming rate (°C/decade, Sen's slope with 95% CI) of mean, hottest and coldest temperature per region."""
+    colors = {"T2M": NASA_BLUE, "T2M_MAX": NASA_RED, "T2M_MIN": NASA_LIGHT_BLUE}
+    fig = go.Figure()
+    for var, sub in comp_df.groupby("variable", sort=False):
+        fig.add_trace(
+            go.Bar(
+                x=sub["region"],
+                y=sub["sen_per_decade"],
+                name=f"{sub['label'].iloc[0]} ({var})",
+                marker_color=colors.get(var, "#64748B"),
+                error_y={
+                    "type": "data",
+                    "symmetric": False,
+                    "array": sub["ci_upper_per_decade"] - sub["sen_per_decade"],
+                    "arrayminus": sub["sen_per_decade"] - sub["ci_lower_per_decade"],
+                    "color": REF_LINE_COLOR,
+                },
+                hovertemplate="<b>%{x}</b>: %{y:+.2f} °C/decade<extra></extra>",
+            )
+        )
+    fig = _apply_scientific_theme(fig, "Warming Rate: Mean vs Hottest vs Coldest (Sen's slope, 95% CI)", "Region", "°C per decade")
+    fig.update_layout(
+        barmode="group",
+        hovermode="closest",
+        legend={"orientation": "h", "yanchor": "top", "y": -0.15, "xanchor": "left", "x": 0.0},
+        margin={"b": 90},
+    )
+    return fig
+
+
+def plot_extreme_index(
+    annual_df: pd.DataFrame,
+    value_col: str,
+    trend: Dict[str, Any],
+    title: str,
+    y_title: str,
+    color: str = NASA_RED,
+    as_bars: bool = False,
+) -> go.Figure:
+    """One yearly extreme index (line or bars) with its trend line (Sen's slope or OLS for counts)."""
+    df = annual_df.sort_values("year")
+    fig = go.Figure()
+    if as_bars:
+        fig.add_trace(go.Bar(x=df["year"], y=df[value_col], marker_color=color, name=y_title,
+                             hovertemplate="<b>%{x}</b>: %{y}<extra></extra>"))
+    else:
+        fig.add_trace(go.Scatter(x=df["year"], y=df[value_col], mode="lines+markers", name="Yearly value",
+                                 line={"color": color, "width": 2.0}, marker={"size": 5},
+                                 hovertemplate="<b>%{x}</b>: %{y:.2f}<extra></extra>"))
+    x_vals = df["year"].astype(float).values
+    fig.add_trace(go.Scatter(
+        x=df["year"], y=trend["sen_intercept"] + trend["sen_slope_per_year"] * x_vals, mode="lines",
+        name=f"{trend.get('slope_method', 'Trend')}: {trend['sen_per_decade']:+.2f} / decade",
+        line={"color": NASA_DARK_NAVY, "width": 2.5, "dash": "dash"}, hoverinfo="skip",
+    ))
+    fig = _apply_scientific_theme(fig, title, "Year", y_title)
+    fig.update_layout(legend={"orientation": "h", "yanchor": "top", "y": -0.18, "xanchor": "left", "x": 0.0}, margin={"b": 80})
+    return fig
+
+
+def plot_decadal_extreme_months(decades_df: pd.DataFrame) -> go.Figure:
+    """Unusually hot vs cold months per year, averaged by decade."""
+    fig = go.Figure()
+    fig.add_trace(go.Bar(x=decades_df["label"], y=decades_df["hot_per_year"], name="Unusually hot months / year",
+                         marker_color=NASA_RED, hovertemplate="%{x}: %{y:.2f} hot months/yr<extra></extra>"))
+    fig.add_trace(go.Bar(x=decades_df["label"], y=decades_df["cold_per_year"], name="Unusually cold months / year",
+                         marker_color=NASA_LIGHT_BLUE, hovertemplate="%{x}: %{y:.2f} cold months/yr<extra></extra>"))
+    fig.add_hline(y=1.2, line_dash="dot", line_color=REF_LINE_COLOR,
+                  annotation_text="Expected if climate were like 1981–2010 (≈1.2/yr)", annotation_position="top right", annotation_font_color=TEXT_COLOR)
+    fig = _apply_scientific_theme(fig, "Unusually Hot vs Cold Months per Year, by Decade", "Decade", "Months per year")
+    fig.update_layout(barmode="group", hovermode="closest", legend={"orientation": "h", "yanchor": "top", "y": -0.18, "xanchor": "left", "x": 0.0}, margin={"b": 90})
+    return fig
+
+
+def plot_monthly_extreme_trends(by_month_tmax: pd.DataFrame, by_month_tmin: pd.DataFrame) -> go.Figure:
+    """Warming rate of each calendar month's hottest and coldest value; solid bars = significant after FDR."""
+    fig = go.Figure()
+    for df, name, color in [(by_month_tmax, "Hottest value (T2M_MAX)", NASA_RED),
+                            (by_month_tmin, "Coldest value (T2M_MIN)", NASA_LIGHT_BLUE)]:
+        opacity = np.where(df["sig_bh"], 1.0, 0.35)
+        fig.add_trace(go.Bar(
+            x=df["month_name"], y=df["sen_slope_per_decade"], name=name, marker_color=color,
+            marker_opacity=opacity, customdata=df["p_bh"],
+            hovertemplate="<b>%{x}</b>: %{y:+.2f} °C/decade (FDR p = %{customdata:.3f})<extra></extra>",
+        ))
+    fig.add_hline(y=0.0, line_width=1.2, line_color=REF_LINE_COLOR)
+    fig = _apply_scientific_theme(fig, "Which Months Are Warming?", "Month", "°C per decade (Sen's slope)")
+    fig.update_layout(barmode="group", hovermode="closest", legend={"orientation": "h", "yanchor": "top", "y": -0.18, "xanchor": "left", "x": 0.0}, margin={"b": 90})
+    return fig
