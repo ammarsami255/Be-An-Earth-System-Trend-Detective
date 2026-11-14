@@ -3,9 +3,12 @@
 **NASA Space Apps Challenge 2026**  
 **Challenge**: *"Be An Earth System Trend Detective!"*  
 **Team**: Machine Without Learning  
-**Participation**: Virtual  
 **Project**: EarthTrend Explorer  
-**Branch**: `feature/rainfall-analysis`  
+**Branch**: `main`  
+**Live Application**: [https://earthtrend-explorer.streamlit.app/](https://earthtrend-explorer.streamlit.app/)
+
+[![Live Demo](https://img.shields.io/badge/Streamlit_App-Live_Demo-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://earthtrend-explorer.streamlit.app/)
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ammarsami255/Be-An-Earth-System-Trend-Detective)
 
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.42%2B-FF4B4B.svg)](https://streamlit.io/)

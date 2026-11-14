@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>EarthTrend Explorer — Project Documentation Dossier</title>
+<style>
+  @page {
+    size: A4;
+    margin: 20mm 18mm 20mm 18mm;
+  }
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+    color: #1e293b;
+    line-height: 1.55;
+    font-size: 10.5pt;
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+  }
+  .header-box {
+    border-bottom: 2.5px solid #0B3D91;
+    padding-bottom: 12px;
+    margin-bottom: 20px;
+  }
+  .header-box h1 {
+    font-size: 22pt;
+    color: #0B3D91;
+    margin: 0 0 4px 0;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  .header-box .sub {
+    font-size: 11pt;
+    color: #475569;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+  }
+  .meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 16px;
+    font-size: 9.5pt;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 8px 12px;
+  }
+  .meta-item strong {
+    color: #0f172a;
+  }
+  h2 {
+    color: #0B3D91;
+    font-size: 13pt;
+    border-bottom: 1px solid #cbd5e1;
+    padding-bottom: 4px;
+    margin-top: 22px;
+    margin-bottom: 10px;
+    font-weight: 700;
+  }
+  h3 {
+    color: #1e3a8a;
+    font-size: 11pt;
+    margin-top: 14px;
+    margin-bottom: 4px;
+    font-weight: 700;
+  }
+  p {
+    margin: 0 0 8px 0;
+    text-align: justify;
+  }
+  ul, ol {
+    margin: 0 0 10px 0;
+    padding-left: 20px;
+  }
+  li {
+    margin-bottom: 4px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0 14px 0;
+    font-size: 9pt;
+  }
+  th, td {
+    border: 1px solid #cbd5e1;
+    padding: 6px 9px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background-color: #f1f5f9;
+    color: #0f172a;
+    font-weight: 700;
+  }
+  .badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 8pt;
+    font-weight: 700;
+  }
+  .badge-working { background-color: #dcfce7; color: #166534; border: 1px solid #86efac; }
+  .badge-limit { background-color: #fef9c3; color: #854d0e; border: 1px solid #fde047; }
+  .badge-future { background-color: #e0f2fe; color: #075985; border: 1px solid #7dd3fc; }
+  .callout {
+    background: #f8fafc;
+    border-left: 4px solid #0B3D91;
+    padding: 8px 12px;
+    margin: 10px 0;
+    font-size: 9.5pt;
+    border-radius: 0 4px 4px 0;
+  }
+  code {
+    font-family: Consolas, 'Courier New', monospace;
+    font-size: 9pt;
+    background: #f1f5f9;
+    padding: 1px 4px;
+    border-radius: 3px;
+    color: #0f172a;
+  }
+  a {
+    color: #0284c7;
+    text-decoration: none;
+    word-break: break-all;
+  }
+  a:hover {
+    text-decoration: underline;
+  }
+  .page-break {
+    page-break-after: always;
+  }
+</style>
+</head>
+<body>
+
+<div class="header-box">
+  <h1>EarthTrend Explorer</h1>
+  <div class="sub">Scientific Project Description & Technical Evaluation Dossier</div>
+  <div class="meta-grid">
+    <div class="meta-item"><strong>NASA Space Apps Challenge:</strong> Be An Earth System Trend Detective!</div>
+    <div class="meta-item"><strong>Team:</strong> Machine Without Learning</div>
+    <div class="meta-item"><strong>GitHub Repository:</strong> <a href="https://github.com/ammarsami255/Be-An-Earth-System-Trend-Detective">https://github.com/ammarsami255/Be-An-Earth-System-Trend-Detective</a></div>
+    <div class="meta-item"><strong>Live Web Application:</strong> <a href="https://earthtrend-explorer.streamlit.app/">https://earthtrend-explorer.streamlit.app/</a></div>
+    <div class="meta-item"><strong>Evaluation Status:</strong> 71/71 Tests Passing (100% Pass Rate) · Clean Verification</div>
+  </div>
+</div>
+
+<h2>1. Executive Summary & Challenge Alignment</h2>
+<p>
+<strong>EarthTrend Explorer</strong> is a scientifically grounded climate intelligence platform and empirical statistical laboratory. Utilizing 43 years (1981–2023, 516 contiguous monthly observations per variable, validated for completeness and missing-value handling) of authentic NASA Earth observation data (NASA POWER / MERRA-2) across three representative Egyptian climate zones—Greater Cairo (urban valley), Alexandria (Mediterranean coast), and Aswan (hyper-arid desert)—the platform investigates long-term environmental shifts, abrupt hydrologic changes, and predictive climate anomalies.
+</p>
+<p>
+<strong>Addressing the NASA Challenge:</strong> The platform rigorously answers the four foundational questions posed by the challenge:
+</p>
+<ul>
+  <li><strong>1. What is changing?</strong> Mean temperatures (<code>T2M</code>), absolute monthly extreme peak hours (<code>T2M_MAX</code>, <code>T2M_MIN</code>), physical precipitation totals (<code>PRECTOTCORR</code> in mm/month and mm/year), multi-scalar drought indices (SPI-3/6/12), and compound hot-dry extremes.</li>
+  <li><strong>2. Where is it changing?</strong> Evaluated across three distinct Egyptian regional regimes mapped to native NASA MERRA-2 0.5° × 0.625° reanalysis grid cells.</li>
+  <li><strong>3. How much is it changing?</strong> Quantified using the robust non-parametric Theil-Sen median slope estimator with Gilbert (1987) 95% confidence intervals, decadal rates, and change-point magnitudes.</li>
+  <li><strong>4. Is it statistically significant?</strong> Evaluated via the non-parametric Mann-Kendall test, Hamed-Rao (1998) serial autocorrelation corrections, Hirsch-Slack Seasonal Mann-Kendall tests, Benjamini-Hochberg FDR (q &lt; 0.05) and Holm-Bonferroni FWER (α &lt; 0.05) multiple testing controls, and the Pettitt (1979) change-point test.</li>
+</ul>
+<p>
+<strong>Why It Matters:</strong> Regional climate adaptation in vulnerable, water-stressed arid environments requires transparent, physically guarded statistical tools rather than unverified black-box claims. By identifying steady warming (+0.26 to +0.43 °C/decade), an abrupt 2015 rainfall step-change (+181% to +266%), and surging compound hot-dry extremes, EarthTrend Explorer converts authentic NASA observations into reliable, localized climate intelligence for water resource planning and regional resilience.
+</p>
+
+<h2>2. Project Details: Architecture, Features, & Status</h2>
+
+<h3>Operational Architecture & Methodology</h3>
+<p>
+EarthTrend Explorer functions as a unified pipeline structured across four analytical modules:
+</p>
+<ol>
+  <li><strong>Data Ingestion & Physical Conversion:</strong> Ingests monthly air temperature (<code>T2M</code>), absolute monthly extreme peak hours (<code>T2M_MAX</code>, <code>T2M_MIN</code>), and bias-corrected precipitation flux (<code>PRECTOTCORR</code>), converting daily rainfall rates (mm/day) into physical monthly accumulation (mm/month) with leap-year adjustments.</li>
+  <li><strong>Non-Parametric Trend Engine:</strong> Assesses long-term trends without assuming normality. Accounts for rank autocorrelation using the Hamed-Rao modified variance $\text{Var}^*(S)$, uncovering that lag-12 autocorrelation in Alexandria ($\rho_{12} = -0.301$) deflates variance and raises $Z^*$ from +5.50 to +6.23.</li>
+  <li><strong>Anomaly & Regime Shift Detection:</strong> Computes WMO 1981–2010 monthly climatological normal departures ($\mu_m, \sigma_m$), tracks calendar-continuous persistent heat/cold spells ($\ge 3$ months, $|Z| \ge 1.0\sigma$), applies Pettitt change-point detection to identify hydrologic regime breaks, and fits 2-parameter Gamma distributions for Standardized Precipitation Index (SPI) drought monitoring.</li>
+  <li><strong>Predictive Anomaly Forecasting:</strong> Implements three candidate time-series models (Seasonal Naive baseline, Holt-Winters Additive Exponential Smoothing, and SARIMAX). Automatically selects the tournament winner via expanding-window chronological cross-validation across 5 historical origins (2018–2022) using Mean Absolute Scaled Error (MASE). Computes 80% and 95% prediction intervals and evaluates forward projections against the WMO 1981–2010 baseline.</li>
+</ol>
+
+<h3>Feature Status, Limitations, & Future Roadmap</h3>
+<table>
+  <thead>
+    <tr>
+      <th style="width: 25%;">Feature Component</th>
+      <th style="width: 15%;">Status</th>
+      <th style="width: 35%;">Implementation Details</th>
+      <th style="width: 25%;">Scientific Consideration / Limitation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Non-Parametric Trends</strong></td>
+      <td><span class="badge badge-working">Working Feature</span></td>
+      <td>Mann-Kendall, Theil-Sen 95% CIs, Hamed-Rao autocorrelation, Seasonal MK, FDR/FWER across 12 months.</td>
+      <td>Statistical trends document observational changes; they do not single-handedly establish causal attribution.</td>
+    </tr>
+    <tr>
+      <td><strong>Physical Rainfall Totals</strong></td>
+      <td><span class="badge badge-working">Working Feature</span></td>
+      <td>Converted daily rate (mm/day) to physical monthly/annual accumulated totals with leap-year accuracy.</td>
+      <td>Reanalysis grid cells represent area averages, which smooth out local convective cloudbursts.</td>
+    </tr>
+    <tr>
+      <td><strong>Pettitt Change-Point Test</strong></td>
+      <td><span class="badge badge-working">Working Feature</span></td>
+      <td>Detected abrupt step-change in rainfall between 2014 and 2015 in Cairo ($p=0.0067$) and Alexandria ($p=0.0060$).</td>
+      <td>Detects <em>when</em> a statistical break occurred, not <em>why</em>. Requires ground-truth validation against EMA gauges.</td>
+    </tr>
+    <tr>
+      <td><strong>SPI Drought & Aridity Guardrails</strong></td>
+      <td><span class="badge badge-working">Working Feature</span></td>
+      <td>Multi-scale SPI (3, 6, 12) via Gamma MLE. Flags SPI as low-reliability when baseline zero frequency $q \ge 0.50$.</td>
+      <td>In hyper-arid regions (Aswan, zero rain in 86% of months), SPI is mathematically bounded above -1.0σ ($\Phi^{-1}(q)$).</td>
+    </tr>
+    <tr>
+      <td><strong>Forecasting Tournament</strong></td>
+      <td><span class="badge badge-working">Working Feature</span></td>
+      <td>5-origin expanding window backtesting (2018–2022); evaluated by MAE, RMSE, and MASE. Winner: Holt-Winters ETS.</td>
+      <td>Statistical extrapolations are probabilistic projections with uncertainty, not deterministic future guarantees.</td>
+    </tr>
+    <tr>
+      <td><strong>2024 Reality Check</strong></td>
+      <td><span class="badge badge-working">Working Feature</span></td>
+      <td>Forecasts made from 1981–2023 are scored against real 2024 NASA observations strictly held out from training.</td>
+      <td>Tests out-of-sample skill and evaluates binomial calibration of 80% and 95% prediction intervals.</td>
+    </tr>
+    <tr>
+      <td><strong>GPM IMERG Cross-Validation</strong></td>
+      <td><span class="badge badge-future">Future Roadmap</span></td>
+      <td>Cross-validate the 2015 MERRA-2 rainfall jump against NASA GPM IMERG satellite constellation observations.</td>
+      <td>Will distinguish physical climatic shifts from potential reanalysis observing-system sensor transitions.</td>
+    </tr>
+    <tr>
+      <td><strong>Spatial NetCDF Grid Ingestion</strong></td>
+      <td><span class="badge badge-future">Future Roadmap</span></td>
+      <td>Direct ingestion of spatial bounding box NetCDF cubes across Egypt via xarray.</td>
+      <td>Current version uses verified NASA POWER point extractions at representative coordinates.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>Technology & Software Stack</h3>
+<ul>
+  <li><strong>Programming Language:</strong> Python 3.10+</li>
+  <li><strong>Data Engineering & Science:</strong> Pandas 2.0+, NumPy 1.24+</li>
+  <li><strong>Statistical & Forecasting Engines:</strong> SciPy 1.11+ (<code>scipy.stats</code>), Statsmodels 0.14+ (<code>statsmodels.tsa</code>), PyMannKendall 1.4.3</li>
+  <li><strong>Interactive Visualizations:</strong> Plotly 5.18+ (<code>graph_objects</code>, <code>subplots</code>) tuned to a high-contrast NASA space dark theme</li>
+  <li><strong>User Interface:</strong> Streamlit 1.30+ with a glass top navbar and 9 specialized analytical pages</li>
+  <li><strong>Quality Assurance:</strong> Pytest (71 automated unit, integration, and headless Streamlit AppTest tests passing at 100%)</li>
+</ul>
+
+<h2>3. NASA Earth Science Data & Resources Used</h2>
+<table>
+  <thead>
+    <tr>
+      <th style="width: 30%;">NASA Resource Name</th>
+      <th style="width: 35%;">Direct Full Link</th>
+      <th style="width: 35%;">Role & Utilization in Project</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>NASA POWER Project</strong><br>(Prediction of Worldwide Energy Resources)</td>
+      <td><a href="https://power.larc.nasa.gov/">https://power.larc.nasa.gov/</a></td>
+      <td>Primary data source for 43-year continuous meteorological time series (1981–2023) across Cairo, Alexandria, and Aswan.</td>
+    </tr>
+    <tr>
+      <td><strong>NASA POWER Monthly API Service</strong></td>
+      <td><a href="https://power.larc.nasa.gov/docs/services/api/temporal/monthly/">https://power.larc.nasa.gov/docs/services/api/temporal/monthly/</a></td>
+      <td>Programmatic point API used for automated data ingestion, header metadata extraction, and live coordinate queries.</td>
+    </tr>
+    <tr>
+      <td><strong>NASA GMAO MERRA-2</strong><br>(Atmospheric Reanalysis, Version 2)</td>
+      <td><a href="https://gmao.gsfc.nasa.gov/reanalysis/MERRA-2/">https://gmao.gsfc.nasa.gov/reanalysis/MERRA-2/</a></td>
+      <td>Underlying physical assimilation model providing gridded 0.5° × 0.625° observations: <code>T2M</code>, <code>T2M_MAX</code>, <code>T2M_MIN</code>, and <code>PRECTOTCORR</code>.</td>
+    </tr>
+    <tr>
+      <td><strong>NASA Earthdata (EOSDIS)</strong></td>
+      <td><a href="https://www.earthdata.nasa.gov/">https://www.earthdata.nasa.gov/</a></td>
+      <td>Data governance reference and authentication provider for NASA Earth Science data holdings.</td>
+    </tr>
+    <tr>
+      <td><strong>NASA Giovanni Portal</strong></td>
+      <td><a href="https://giovanni.gsfc.nasa.gov/">https://giovanni.gsfc.nasa.gov/</a></td>
+      <td>Supported data format in <code>src/data_loader.py</code> for cross-verifying time-series exports and regional bounding boxes.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>4. Space Agency Partner, International Standards, & Third-Party References</h2>
+<table>
+  <thead>
+    <tr>
+      <th style="width: 30%;">Resource / Standard</th>
+      <th style="width: 35%;">Direct Full Link</th>
+      <th style="width: 35%;">Citation & Implementation Credit</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>WMO Climate Normals Guidelines</strong><br>(WMO-No. 1203 & WMO-No. 49)</td>
+      <td><a href="https://library.wmo.int/records/item/55797-wmo-guidelines-on-the-calculation-of-climate-normals">https://library.wmo.int/records/item/55797-wmo-guidelines-on-the-calculation-of-climate-normals</a></td>
+      <td>World Meteorological Organization standard 1981–2010 30-year climatological normal baseline methodology and ≥10-year provisional normal rule.</td>
+    </tr>
+    <tr>
+      <td><strong>WMO SPI User Guide</strong><br>(WMO-No. 1090)</td>
+      <td><a href="https://library.wmo.int/records/item/39719-standardized-precipitation-index-user-guide">https://library.wmo.int/records/item/39719-standardized-precipitation-index-user-guide</a></td>
+      <td>Standard international classification brackets and drought threshold color conventions (Extremely Wet to Extremely Dry).</td>
+    </tr>
+    <tr>
+      <td><strong>pyMannKendall Library</strong><br>(Hussain & Mahmud, 2019)</td>
+      <td><a href="https://github.com/mmhs013/pyMannKendall">https://github.com/mmhs013/pyMannKendall</a></td>
+      <td>Open-source Python library used for baseline non-parametric trend verification and rank correlation routines.</td>
+    </tr>
+    <tr>
+      <td><strong>Statsmodels Econometrics Library</strong></td>
+      <td><a href="https://www.statsmodels.org/">https://www.statsmodels.org/</a></td>
+      <td>State-space time-series framework implementing Holt-Winters Exponential Smoothing and SARIMAX model estimation.</td>
+    </tr>
+    <tr>
+      <td><strong>Academic Literature Citations</strong></td>
+      <td><a href="https://github.com/ammarsami255/Be-An-Earth-System-Trend-Detective/blob/main/SOURCES_AND_REFERENCES.md">SOURCES_AND_REFERENCES.md</a></td>
+      <td>Mann (1945), Sen (1968), Pettitt (1979), Hamed & Rao (1998), Hyndman & Koehler (2006, MASE), Box & Jenkins (2015), Pyper & Peterman (1998, $N_{\text{eff}}$).</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>5. Disclosure of Super Intelligence (SI) & Artificial Intelligence Tools</h2>
+<p>
+In compliance with the NASA Space Apps Challenge Super Intelligence Policy:
+</p>
+<ul>
+  <li><strong>How SI was Utilized:</strong> Large Language Model (LLM) coding assistants were used collaboratively for code scaffolding, automated unit test generation in <code>pytest</code>, and formatting technical documentation and Markdown dossiers.</li>
+  <li><strong>Strictly Human & Deterministic Elements:</strong>
+    <ul>
+      <li><strong>Data Authenticity:</strong> Zero data was generated, synthesized, or simulated by AI. All inputs are 100% authentic NASA POWER / MERRA-2 observations.</li>
+      <li><strong>Mathematical Rigor:</strong> All trend statistics ($S$, $Z^*$, Theil-Sen slope), change-point ranks ($K$), drought indices (SPI), and forecast predictions are executed deterministically by Python numerical libraries (SciPy, Statsmodels, NumPy).</li>
+      <li><strong>Epistemological Candor:</strong> The project strictly refrains from using generative AI to produce unverified causal attributions or fabricate environmental phenomena.</li>
+    </ul>
+  </li>
+  <li><strong>Branding Compliance:</strong> No official NASA logos, insignias, or mission branding were generated, modified, or placed in project media.</li>
+</ul>
+
+<div class="callout">
+  <strong>Project Verification & Review Links:</strong><br>
+  • <strong>Public GitHub Repository:</strong> <a href="https://github.com/ammarsami255/Be-An-Earth-System-Trend-Detective">https://github.com/ammarsami255/Be-An-Earth-System-Trend-Detective</a><br>
+  • <strong>Live Interactive App:</strong> <a href="https://earthtrend-explorer.streamlit.app/">https://earthtrend-explorer.streamlit.app/</a> (Deployed & Live on Streamlit Community Cloud)<br>
+  • <strong>Master Reproducible Audit Script:</strong> <code>python scripts/reproducible_scientific_audit.py</code>
+</div>
+
+</body>
+</html>
